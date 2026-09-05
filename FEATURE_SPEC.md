@@ -23,3 +23,12 @@
 19. Development mode with mocks
 20. Installation scripts for Windows and Unix systems
 21. Virtual environment support
+22. Service start/stop controls
+23. Connection monitoring
+24. Configuration persistence
+25. Secure session management
+26. Multi-user access control
+27. Real-time stream display
+28. Text file export functionality
+29. Responsive design for all devices
+30. Language-specific stream access

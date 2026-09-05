@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Transcription Service - User Interface</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        #transcription, #translation {
+            height: 300px;
+            overflow-y: auto;
+        }
+        .auto-scroll {
+            overflow-y: auto;
+            max-height: 300px;
+        }
+    </style>
 </head>
 <body>
     <div class="container mt-5">
@@ -13,7 +23,7 @@
         <div class="row mt-4">
             <div class="col-md-6">
                 <h3>Transcription Stream</h3>
-                <div id="transcription" class="border p-3 bg-light">
+                <div id="transcription" class="border p-3 bg-light auto-scroll">
                     <!-- Transcription content will appear here -->
                     <p>Waiting for transcription...</p>
                 </div>
@@ -21,7 +31,7 @@
             
             <div class="col-md-6">
                 <h3>Translation Stream</h3>
-                <div id="translation" class="border p-3 bg-light">
+                <div id="translation" class="border p-3 bg-light auto-scroll">
                     <!-- Translation content will appear here -->
                     <p>Waiting for translation...</p>
                 </div>
@@ -32,10 +42,10 @@
             <div class="col-12">
                 <h3>Language Selection</h3>
                 <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-primary">English</button>
-                    <button type="button" class="btn btn-outline-primary">French</button>
-                    <button type="button" class="btn btn-outline-primary">Spanish</button>
-                    <button type="button" class="btn btn-outline-primary">Arabic</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="selectLanguage('English')">English</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="selectLanguage('French')">French</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="selectLanguage('Spanish')">Spanish</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="selectLanguage('Arabic')">Arabic</button>
                 </div>
             </div>
         </div>
@@ -52,5 +62,55 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentLanguage = 'English';
+        let autoScroll = true;
+        let sessionId = null;
+
+        function selectLanguage(language) {
+            currentLanguage = language;
+            // In a real implementation, this would update the language
+            alert(`Selected language: ${language}`);
+        }
+
+        function handleScroll() {
+            const transcription = document.getElementById('transcription');
+            const translation = document.getElementById('translation');
+            
+            // Check if user scrolled to bottom
+            autoScroll = (transcription.scrollTop + transcription.clientHeight >= transcription.scrollHeight - 5) &&
+                         (translation.scrollTop + translation.clientHeight >= translation.scrollHeight - 5);
+        }
+
+        function updateTranscription(text) {
+            const transcription = document.getElementById('transcription');
+            transcription.innerHTML += `<p>${text}</p>`;
+            if (autoScroll) {
+                transcription.scrollTop = transcription.scrollHeight;
+            }
+        }
+
+        function updateTranslation(text) {
+            const translation = document.getElementById('translation');
+            translation.innerHTML += `<p>${text}</p>`;
+            if (autoScroll) {
+                translation.scrollTop = translation.scrollHeight;
+            }
+        }
+
+        // Set up scroll event listeners
+        document.getElementById('transcription').addEventListener('scroll', handleScroll);
+        document.getElementById('translation').addEventListener('scroll', handleScroll);
+
+        // Simulate receiving transcription data
+        setInterval(() => {
+            if (Math.random() > 0.7) {
+                updateTranscription("Sample transcription text " + Math.random());
+            }
+            if (Math.random() > 0.7) {
+                updateTranslation("Sample translation text " + Math.random());
+            }
+        }, 2000);
+    </script>
 </body>
 </html>

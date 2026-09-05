@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcription Service - Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Transcription Service - Admin Panel</h1>
+        
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <h3>Service Control</h3>
+                <button class="btn btn-success me-2">Start Service</button>
+                <button class="btn btn-danger me-2">Stop Service</button>
+                <button class="btn btn-info">Monitor Connections</button>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <h3>Configuration</h3>
+                <div class="card">
+                    <div class="card-body">
+                        <form id="configForm">
+                            <div class="mb-3">
+                                <label for="audioDevice" class="form-label">Audio Input Device</label>
+                                <select class="form-select" id="audioDevice">
+                                    <option value="Default Audio Device">Default Audio Device</option>
+                                    <option value="Microphone 1">Microphone 1</option>
+                                    <option value="Microphone 2">Microphone 2</option>
+                                    <option value="USB Audio Device">USB Audio Device</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="transcriptionPort" class="form-label">Transcription Port</label>
+                                <input type="number" class="form-control" id="transcriptionPort" value="5000">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="translationPort" class="form-label">Translation Port</label>
+                                <input type="number" class="form-control" id="translationPort" value="5001">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="biasWords" class="form-label">Bias Words (comma separated)</label>
+                                <input type="text" class="form-control" id="biasWords" value="transcription,translation">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="saveLocation" class="form-label">Save Location</label>
+                                <input type="text" class="form-control" id="saveLocation" value="./transcriptions">
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">Save Configuration</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <h3>Connection Monitoring</h3>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Internal Connections</h5>
+                                <ul class="list-group">
+                                    <li class="list-group-item">Assembly AI API</li>
+                                    <li class="list-group-item">Transcription Service</li>
+                                    <li class="list-group-item">Translation Service</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>External Connections</h5>
+                                <ul class="list-group">
+                                    <li class="list-group-item">User Interface 1</li>
+                                    <li class="list-group-item">User Interface 2</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('configForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Configuration saved!');
+        });
+    </script>
+</body>
+</html>

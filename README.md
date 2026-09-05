@@ -11,6 +11,14 @@ A real-time transcription and translation service using Assembly AI.
 - QR code access for users
 - Support for multiple languages (English, French, Spanish, Arabic)
 - Secure admin authentication
+- Audio input device selection
+- Assembly AI API key management
+- Port configuration management
+- Word biasing for transcription
+- Transcription saving to text file
+- Session-based text access control
+- Responsive UI design
+- Mock endpoints for testing
 
 ## Setup
 

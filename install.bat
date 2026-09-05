@@ -1,12 +1,16 @@
 @echo off
-echo Creating virtual environment...
+REM Create virtual environment
 python -m venv venv
 
-echo Activating virtual environment...
+REM Activate virtual environment
 call venv\Scripts\activate
 
-echo Installing dependencies...
+REM Upgrade pip
+pip install --upgrade pip
+
+REM Install dependencies
 pip install -r requirements.txt
 
-echo Installation complete.
+echo Installation complete!
+echo To run the application, execute: run.bat
 pause

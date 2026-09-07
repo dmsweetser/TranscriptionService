@@ -57,7 +57,7 @@ Sensitive keys are stored in `.env` file. Example:
 ```
 ASSEMBLY_AI_API_KEY=your_assembly_ai_key_here
 ADMIN_PASSWORD=your_admin_password_here
-TRANSCRIPTION_PORT=5000
+TRANSCRIPTION_PORT=5123
 TRANSLATION_PORT=5001
 ```
 

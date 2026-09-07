@@ -12,5 +12,5 @@ if not exist requirements.txt (
 pip install -r requirements.txt --quiet
 
 REM Run with Gunicorn for production
-gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 app:app
+gunicorn --bind 0.0.0.0:5050 --workers 4 --timeout 120 app:app
 pause

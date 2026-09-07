@@ -112,7 +112,7 @@ def persist_config(config):
     env_path = os.path.join(os.path.dirname(__file__), '.env')
     with open(env_path, 'w') as f:
         f.write(f"DEFAULT_AUDIO_DEVICE={config.get('audio_device', 'Default Audio Device')}\n")
-        f.write(f"TRANSCRIPTION_PORT={config.get('transcription_port', 5000)}\n")
+        f.write(f"TRANSCRIPTION_PORT={config.get('transcription_port', 5123)}\n")
         f.write(f"TRANSLATION_PORT={config.get('translation_port', 5001)}\n")
         f.write(f"BIAS_WORDS={','.join(config.get('bias_words', []))}\n")
         f.write(f"SAVE_LOCATION={config.get('save_location', './transcriptions')}\n")

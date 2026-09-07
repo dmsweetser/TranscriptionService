@@ -56,5 +56,8 @@ class AudioStreamer:
 
     def stop(self):
         self.is_running = False
+        if self.stream:
+            self.stream.stop()
+            self.stream.close()
         if self.thread:
-            self.thread.join()
+            self.thread.join(timeout=2.0)

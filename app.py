@@ -27,7 +27,15 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)
-app.secret_key = os.getenv('SECRET_KEY', os.urandom(24))
+secret_key = os.getenv('SECRET_KEY')
+if not secret_key:
+    import secrets
+    secret_key = secrets.token_hex(32)
+    env_path = os.path.join(os.path.dirname(__file__), '.env')
+    with open(env_path, 'a') as f:
+        f.write(f"\nSECRET_KEY={secret_key}\n")
+    logger.info("Generated new SECRET_KEY. Restart the application.")
+app.secret_key = secret_key
 
 # Initialize services
 audio_streamer = None
@@ -49,12 +57,16 @@ def get_audio_devices():
 # Translation languages
 TRANSLATION_LANGUAGES = ["English", "French", "Spanish", "Arabic", "German", "Italian", "Japanese", "Korean"]
 
-def start_service():
+def start_service(restart=False):
     global service_running, service_thread, audio_streamer
-    if service_running:
+    if service_running and not restart:
+        logger.warning("Service is already running")
         return
+    if service_running:
+        stop_service()
+        time.sleep(0.5)
     service_running = True
-    device_name = os.getenv("DEFAULT_AUDIO_DEVICE")
+    device_name = os.getenv("DEFAULT_AUDIO_DEVICE", "Default Audio Device")
     audio_streamer = AudioStreamer(device_name=device_name)
     audio_streamer.start()
     
@@ -62,6 +74,7 @@ def start_service():
         global service_running
         try:
             for text in transcription_service.stream_transcription(audio_streamer):
+                if not service_running: break
                 logger.info(f"Transcription: {text}")
                 with session_lock:
                     for q in session_queues.values():
@@ -180,15 +193,17 @@ def authenticate():
     password = request.json.get('password')
     stored_hash = os.getenv("ADMIN_PASSWORD_HASH")
     if not stored_hash:
-        # Fallback for initial setup
         if password == os.getenv("ADMIN_PASSWORD"):
             session['authenticated'] = True
             return jsonify({"authenticated": True})
         return jsonify({"authenticated": False}), 401
     
-    if bcrypt.checkpw(password.encode('utf-8'), stored_hash.encode('utf-8')):
-        session['authenticated'] = True
-        return jsonify({"authenticated": True})
+    try:
+        if bcrypt.checkpw(password.encode('utf-8'), stored_hash.encode('utf-8')):
+            session['authenticated'] = True
+            return jsonify({"authenticated": True})
+    except Exception as e:
+        logger.error(f"Auth error: {e}")
     return jsonify({"authenticated": False}), 401
 
 @app.route('/admin/logout', methods=['POST'])

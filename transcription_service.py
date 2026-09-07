@@ -2,6 +2,8 @@ import assemblyai as aai
 import numpy as np
 import os
 import logging
+import time
+import random
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -26,15 +28,20 @@ class TranscriptionService:
             return f"[Error: {str(e)}]"
 
     def _mock_transcription(self, chunks):
-        return "Mock: Real transcription requires ASSEMBLY_AI_API_KEY configuration."
+        phrases = ["Hello world", "Testing transcription", "Production ready", "Mock data stream"]
+        return random.choice(phrases)
 
     def stream_transcription(self, audio_streamer):
         buffer = []
+        chunk_size = audio_streamer.sample_rate
         while True:
             chunk = audio_streamer.get_audio_chunk()
             if chunk is not None:
                 buffer.append(chunk)
-                if len(buffer) > audio_streamer.sample_rate:
+                if len(buffer) >= chunk_size:
                     text = self.transcribe_stream(np.concatenate(buffer))
                     buffer = []
-                    yield text
+                    if text:
+                        yield text
+            else:
+                time.sleep(0.1)

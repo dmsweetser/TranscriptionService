@@ -9,22 +9,35 @@
         #transcription, #translation {
             height: 300px;
             overflow-y: auto;
+            background: #f8f9fa;
         }
         .auto-scroll {
             overflow-y: auto;
             max-height: 300px;
         }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .status-active { background-color: green; }
+        .status-inactive { background-color: red; }
     </style>
 </head>
 <body>
     <div class="container mt-5">
         <h1 class="text-center">Transcription Service</h1>
+        <div class="text-center mb-3">
+            <span id="connectionStatus" class="status-indicator status-inactive"></span>
+            <span id="statusText">Disconnected</span>
+        </div>
         
         <div class="row mt-4">
             <div class="col-md-6">
                 <h3>Transcription Stream</h3>
                 <div id="transcription" class="border p-3 bg-light auto-scroll">
-                    <!-- Transcription content will appear here -->
                     <p>Waiting for transcription...</p>
                 </div>
             </div>
@@ -32,7 +45,6 @@
             <div class="col-md-6">
                 <h3>Translation Stream</h3>
                 <div id="translation" class="border p-3 bg-light auto-scroll">
-                    <!-- Translation content will appear here -->
                     <p>Waiting for translation...</p>
                 </div>
             </div>
@@ -41,8 +53,8 @@
         <div class="row mt-4">
             <div class="col-12">
                 <h3>Language Selection</h3>
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-primary" onclick="selectLanguage('English')">English</button>
+                <div class="btn-group" role="group" id="langButtons">
+                    <button type="button" class="btn btn-outline-primary active" onclick="selectLanguage('English')">English</button>
                     <button type="button" class="btn btn-outline-primary" onclick="selectLanguage('French')">French</button>
                     <button type="button" class="btn btn-outline-primary" onclick="selectLanguage('Spanish')">Spanish</button>
                     <button type="button" class="btn btn-outline-primary" onclick="selectLanguage('Arabic')">Arabic</button>
@@ -54,8 +66,8 @@
             <div class="col-12">
                 <h3>QR Code Access</h3>
                 <div class="text-center">
-                    <img src="https://via.placeholder.com/150" alt="QR Code" class="img-thumbnail">
-                    <p>Scan this QR code to access the stream</p>
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=http://localhost:5000" alt="QR Code" class="img-thumbnail">
+                    <p>Scan this QR code to access the stream on mobile</p>
                 </div>
             </div>
         </div>
@@ -64,20 +76,23 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let currentLanguage = 'English';
+        let transcriptionSource = null;
+        let translationSource = null;
         let autoScroll = true;
-        let sessionId = null;
 
         function selectLanguage(language) {
             currentLanguage = language;
-            // In a real implementation, this would update the language
-            alert(`Selected language: ${language}`);
+            document.querySelectorAll('#langButtons .btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            if (translationSource) {
+                translationSource.close();
+                startTranslationStream();
+            }
         }
 
         function handleScroll() {
             const transcription = document.getElementById('transcription');
             const translation = document.getElementById('translation');
-            
-            // Check if user scrolled to bottom
             autoScroll = (transcription.scrollTop + transcription.clientHeight >= transcription.scrollHeight - 5) &&
                          (translation.scrollTop + translation.clientHeight >= translation.scrollHeight - 5);
         }
@@ -85,32 +100,48 @@
         function updateTranscription(text) {
             const transcription = document.getElementById('transcription');
             transcription.innerHTML += `<p>${text}</p>`;
-            if (autoScroll) {
-                transcription.scrollTop = transcription.scrollHeight;
-            }
+            if (autoScroll) transcription.scrollTop = transcription.scrollHeight;
         }
 
         function updateTranslation(text) {
             const translation = document.getElementById('translation');
-            translation.innerHTML += `<p>${text}</p>`;
-            if (autoScroll) {
-                translation.scrollTop = translation.scrollHeight;
-            }
+            translation.innerHTML += `<p>[${currentLanguage}] ${text}</p>`;
+            if (autoScroll) translation.scrollTop = translation.scrollHeight;
         }
 
-        // Set up scroll event listeners
+        function startTranscriptionStream() {
+            if (transcriptionSource) transcriptionSource.close();
+            transcriptionSource = new EventSource('/api/transcription/stream');
+            transcriptionSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.type === 'transcription') updateTranscription(data.text);
+            };
+            transcriptionSource.onerror = function() {
+                document.getElementById('connectionStatus').className = 'status-indicator status-inactive';
+                document.getElementById('statusText').innerText = 'Disconnected';
+                setTimeout(startTranscriptionStream, 3000);
+            };
+        }
+
+        function startTranslationStream() {
+            if (translationSource) translationSource.close();
+            translationSource = new EventSource(`/api/translation/stream/${currentLanguage}`);
+            translationSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.type === 'translation') updateTranslation(data.text);
+            };
+            translationSource.onerror = function() {
+                document.getElementById('connectionStatus').className = 'status-indicator status-inactive';
+                document.getElementById('statusText').innerText = 'Disconnected';
+                setTimeout(startTranslationStream, 3000);
+            };
+        }
+
         document.getElementById('transcription').addEventListener('scroll', handleScroll);
         document.getElementById('translation').addEventListener('scroll', handleScroll);
 
-        // Simulate receiving transcription data
-        setInterval(() => {
-            if (Math.random() > 0.7) {
-                updateTranscription("Sample transcription text " + Math.random());
-            }
-            if (Math.random() > 0.7) {
-                updateTranslation("Sample translation text " + Math.random());
-            }
-        }, 2000);
+        startTranscriptionStream();
+        startTranslationStream();
     </script>
 </body>
 </html>

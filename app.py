@@ -1,60 +1,104 @@
 import os
 import sys
-from flask import Flask, render_template, request, jsonify, session
+import logging
+import json
+import time
+import queue
+from flask import Flask, render_template, request, jsonify, session, Response
+from flask_cors import CORS
 from dotenv import load_dotenv
+import bcrypt
 import argparse
 import threading
-import time
-import json
+
+from audio_streamer import AudioStreamer
+from transcription_service import TranscriptionService
+from translation_service import TranslationService
 
 # Load environment variables
 load_dotenv()
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
-app.secret_key = os.getenv('ADMIN_PASSWORD', 'default_secret_key')
+CORS(app)
+app.secret_key = os.getenv('SECRET_KEY', os.urandom(24))
 
-# Mock data for demonstration
-MOCK_AUDIO_DEVICES = [
-    "Default Audio Device",
-    "Microphone 1",
-    "Microphone 2",
-    "USB Audio Device"
-]
+# Initialize services
+audio_streamer = None
+transcription_service = TranscriptionService()
+translation_service = TranslationService()
 
-MOCK_TRANSLATION_LANGUAGES = [
-    "English",
-    "French",
-    "Spanish",
-    "Arabic"
-]
-
-# Global state for service
+# Global state
 service_running = False
-transcription_data = []
-translation_data = []
-current_session_id = None
+service_thread = None
+session_queues = {}
+session_lock = threading.Lock()
+
+# Audio device list from sounddevice
+def get_audio_devices():
+    import sounddevice as sd
+    devices = sd.query_devices()
+    return [dev['name'] for dev in devices]
+
+# Translation languages
+TRANSLATION_LANGUAGES = ["English", "French", "Spanish", "Arabic", "German", "Italian", "Japanese", "Korean"]
 
 def start_service():
-    global service_running
+    global service_running, service_thread, audio_streamer
+    if service_running:
+        return
     service_running = True
-    # In a real implementation, this would start the actual transcription service
-    print("Service started")
+    device_name = os.getenv("DEFAULT_AUDIO_DEVICE")
+    audio_streamer = AudioStreamer(device_name=device_name)
+    audio_streamer.start()
+    
+    def worker():
+        global service_running
+        try:
+            for text in transcription_service.stream_transcription(audio_streamer):
+                logger.info(f"Transcription: {text}")
+                with session_lock:
+                    for q in session_queues.values():
+                        q.put({"type": "transcription", "text": text})
+                
+                for lang in TRANSLATION_LANGUAGES:
+                    translated = translation_service.translate(text, lang)
+                    with session_lock:
+                        for q in session_queues.values():
+                            q.put({"type": "translation", "lang": lang, "text": translated})
+        except Exception as e:
+            logger.error(f"Service worker error: {e}")
+        finally:
+            service_running = False
+
+    service_thread = threading.Thread(target=worker, daemon=True)
+    service_thread.start()
+    logger.info("Service started")
 
 def stop_service():
-    global service_running
+    global service_running, audio_streamer
+    if not service_running:
+        return
     service_running = False
-    # In a real implementation, this would stop the actual transcription service
-    print("Service stopped")
+    if audio_streamer:
+        audio_streamer.stop()
+    logger.info("Service stopped")
 
 def generate_session_id():
-    return f"session_{int(time.time())}"
+    return f"session_{int(time.time())}_{os.urandom(4).hex()}"
 
 def save_transcription(session_id, text):
     save_location = os.getenv("SAVE_LOCATION", "./transcriptions")
     os.makedirs(save_location, exist_ok=True)
     filename = os.path.join(save_location, f"{session_id}.txt")
-    with open(filename, 'w') as f:
-        f.write(text)
+    with open(filename, 'a') as f:
+        f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {text}\n")
 
 def get_transcription(session_id):
     save_location = os.getenv("SAVE_LOCATION", "./transcriptions")
@@ -64,22 +108,62 @@ def get_transcription(session_id):
             return f.read()
     return ""
 
-# Mock endpoints
-@app.route('/mock/transcription', methods=['GET'])
-def mock_transcription():
-    return jsonify({"transcription": "This is a mock transcription."})
+def persist_config(config):
+    env_path = os.path.join(os.path.dirname(__file__), '.env')
+    with open(env_path, 'w') as f:
+        f.write(f"DEFAULT_AUDIO_DEVICE={config.get('audio_device', 'Default Audio Device')}\n")
+        f.write(f"TRANSCRIPTION_PORT={config.get('transcription_port', 5000)}\n")
+        f.write(f"TRANSLATION_PORT={config.get('translation_port', 5001)}\n")
+        f.write(f"BIAS_WORDS={','.join(config.get('bias_words', []))}\n")
+        f.write(f"SAVE_LOCATION={config.get('save_location', './transcriptions')}\n")
+    load_dotenv(env_path)
 
-@app.route('/mock/translation', methods=['GET'])
-def mock_translation():
-    return jsonify({"translation": "This is a mock translation."})
+@app.route('/api/audio_devices', methods=['GET'])
+def get_audio_devices():
+    if 'authenticated' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    return jsonify({"devices": get_audio_devices()})
 
-@app.route('/mock/audio_devices', methods=['GET'])
-def mock_audio_devices():
-    return jsonify({"devices": MOCK_AUDIO_DEVICES})
+@app.route('/api/translation_languages', methods=['GET'])
+def get_translation_languages():
+    return jsonify({"languages": TRANSLATION_LANGUAGES})
 
-@app.route('/mock/translation_languages', methods=['GET'])
-def mock_translation_languages():
-    return jsonify({"languages": MOCK_TRANSLATION_LANGUAGES})
+@app.route('/api/transcription/stream', methods=['GET'])
+def transcription_stream():
+    session_id = generate_session_id()
+    q = queue.Queue()
+    with session_lock:
+        session_queues[session_id] = q
+    try:
+        def generate():
+            while True:
+                data = q.get()
+                if data is None:
+                    break
+                yield f"data: {json.dumps(data)}\n\n"
+        return Response(generate(), mimetype='text/event-stream')
+    except GeneratorExit:
+        with session_lock:
+            session_queues.pop(session_id, None)
+
+@app.route('/api/translation/stream/<lang>', methods=['GET'])
+def translation_stream(lang):
+    session_id = generate_session_id()
+    q = queue.Queue()
+    with session_lock:
+        session_queues[session_id] = q
+    try:
+        def generate():
+            while True:
+                data = q.get()
+                if data is None:
+                    break
+                if data.get('type') == 'translation' and data.get('lang') == lang:
+                    yield f"data: {json.dumps(data)}\n\n"
+        return Response(generate(), mimetype='text/event-stream')
+    except GeneratorExit:
+        with session_lock:
+            session_queues.pop(session_id, None)
 
 @app.route('/')
 def index():
@@ -94,7 +178,15 @@ def admin():
 @app.route('/admin/auth', methods=['POST'])
 def authenticate():
     password = request.json.get('password')
-    if password == os.getenv("ADMIN_PASSWORD"):
+    stored_hash = os.getenv("ADMIN_PASSWORD_HASH")
+    if not stored_hash:
+        # Fallback for initial setup
+        if password == os.getenv("ADMIN_PASSWORD"):
+            session['authenticated'] = True
+            return jsonify({"authenticated": True})
+        return jsonify({"authenticated": False}), 401
+    
+    if bcrypt.checkpw(password.encode('utf-8'), stored_hash.encode('utf-8')):
         session['authenticated'] = True
         return jsonify({"authenticated": True})
     return jsonify({"authenticated": False}), 401
@@ -120,8 +212,14 @@ def admin_config():
 def update_config():
     if 'authenticated' not in session:
         return jsonify({"error": "Unauthorized"}), 401
-    # In a real implementation, this would update the configuration
-    return jsonify({"status": "Configuration updated successfully"})
+    config = request.json
+    try:
+        persist_config(config)
+        logger.info("Configuration updated and persisted")
+        return jsonify({"status": "Configuration updated successfully"})
+    except Exception as e:
+        logger.error(f"Config update error: {e}")
+        return jsonify({"error": "Failed to update configuration"}), 500
 
 @app.route('/admin/service', methods=['POST'])
 def control_service():
@@ -165,9 +263,10 @@ def get_translation_stream(session_id, language):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='TranscriptionService')
     parser.add_argument('--mock', action='store_true', help='Enable mock endpoints')
+    parser.add_argument('--port', type=int, default=5000, help='Port to run on')
     args = parser.parse_args()
     
     if args.mock:
-        print("Starting with mock endpoints enabled")
+        logger.warning("Running in mock mode. Real functionality requires API keys.")
     
-    app.run(debug=True, host='0.0.0.0', port=5456)
+    app.run(debug=args.mock, host='0.0.0.0', port=args.port)

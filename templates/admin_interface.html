@@ -13,8 +13,8 @@
         <div class="row mt-4">
             <div class="col-md-12">
                 <h3>Service Control</h3>
-                <button class="btn btn-success me-2" onclick="controlService('start')">Start Service</button>
-                <button class="btn btn-danger me-2" onclick="controlService('stop')">Stop Service</button>
+                <button class="btn btn-success me-2" id="startBtn" onclick="controlService('start')">Start Service</button>
+                <button class="btn btn-danger me-2" id="stopBtn" onclick="controlService('stop')" disabled>Stop Service</button>
                 <button class="btn btn-info" onclick="logout()">Logout</button>
             </div>
         </div>
@@ -27,11 +27,8 @@
                         <form id="configForm">
                             <div class="mb-3">
                                 <label for="audioDevice" class="form-label">Audio Input Device</label>
-                                <select class="form-select" id="audioDevice">
-                                    <option value="Default Audio Device">Default Audio Device</option>
-                                    <option value="Microphone 1">Microphone 1</option>
-                                    <option value="Microphone 2">Microphone 2</option>
-                                    <option value="USB Audio Device">USB Audio Device</option>
+                                <select class="form-select" id="audioDevice" disabled>
+                                    <option value="">Loading devices...</option>
                                 </select>
                             </div>
                             
@@ -70,17 +67,17 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <h5>Internal Connections</h5>
-                                <ul class="list-group">
-                                    <li class="list-group-item">Assembly AI API</li>
-                                    <li class="list-group-item">Transcription Service</li>
-                                    <li class="list-group-item">Translation Service</li>
+                                <ul class="list-group" id="internalConnections">
+                                    <li class="list-group-item">Assembly AI API <span class="badge bg-secondary float-end">Checking</span></li>
+                                    <li class="list-group-item">Transcription Service <span class="badge bg-secondary float-end">Checking</span></li>
+                                    <li class="list-group-item">Translation Service <span class="badge bg-secondary float-end">Checking</span></li>
                                 </ul>
                             </div>
                             <div class="col-md-6">
                                 <h5>External Connections</h5>
-                                <ul class="list-group">
-                                    <li class="list-group-item">User Interface 1</li>
-                                    <li class="list-group-item">User Interface 2</li>
+                                <ul class="list-group" id="externalConnections">
+                                    <li class="list-group-item">User Interface 1 <span class="badge bg-secondary float-end">Checking</span></li>
+                                    <li class="list-group-item">User Interface 2 <span class="badge bg-secondary float-end">Checking</span></li>
                                 </ul>
                             </div>
                         </div>
@@ -95,23 +92,25 @@
         function controlService(action) {
             fetch('/admin/service', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({action: action})
             })
             .then(response => response.json())
             .then(data => {
                 alert(data.status);
+                updateServiceButtons(action === 'start');
             });
+        }
+
+        function updateServiceButtons(isRunning) {
+            document.getElementById('startBtn').disabled = isRunning;
+            document.getElementById('stopBtn').disabled = !isRunning;
         }
 
         function logout() {
             fetch('/admin/logout', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                headers: { 'Content-Type': 'application/json' }
             })
             .then(response => response.json())
             .then(data => {
@@ -121,8 +120,55 @@
 
         document.getElementById('configForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            alert('Configuration saved!');
+            const config = {
+                audio_device: document.getElementById('audioDevice').value,
+                transcription_port: document.getElementById('transcriptionPort').value,
+                translation_port: document.getElementById('translationPort').value,
+                bias_words: document.getElementById('biasWords').value.split(','),
+                save_location: document.getElementById('saveLocation').value
+            };
+            fetch('/admin/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.status || data.error);
+            });
         });
+
+        function loadConfig() {
+            fetch('/admin/config')
+            .then(response => response.json())
+            .then(data => {
+                if (data.audio_device) document.getElementById('audioDevice').value = data.audio_device;
+                if (data.transcription_port) document.getElementById('transcriptionPort').value = data.transcription_port;
+                if (data.translation_port) document.getElementById('translationPort').value = data.translation_port;
+                if (data.bias_words) document.getElementById('biasWords').value = data.bias_words.join(',');
+                if (data.save_location) document.getElementById('saveLocation').value = data.save_location;
+                document.getElementById('audioDevice').disabled = false;
+            })
+            .catch(err => console.error('Failed to load config:', err));
+        }
+
+        function loadDevices() {
+            fetch('/api/audio_devices')
+            .then(response => response.json())
+            .then(data => {
+                const select = document.getElementById('audioDevice');
+                select.innerHTML = '';
+                data.devices.forEach(dev => {
+                    const option = document.createElement('option');
+                    option.value = dev;
+                    option.text = dev;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        loadConfig();
+        loadDevices();
     </script>
 </body>
 </html>

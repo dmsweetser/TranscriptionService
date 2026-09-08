@@ -14,5 +14,5 @@ pip install -r requirements.txt --quiet
 REM Run with Gunicorn for production
 set PORT=%TRANSCRIPTION_PORT%
 if not defined PORT set PORT=5000
-gunicorn --bind 0.0.0.0:%PORT% --workers 4 --timeout 120 app:app
+gunicorn --bind 0.0.0.0:%PORT% --workers 4 --timeout 120 --log-level info app:app
 pause

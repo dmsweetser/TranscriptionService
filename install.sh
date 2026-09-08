@@ -15,9 +15,14 @@ pip install -r requirements.txt
 # Generate secure admin password hash if not present
 if ! grep -q "ADMIN_PASSWORD_HASH" .env; then
     echo "Generating secure admin password hash..."
-    HASH=$(python3 -c "import bcrypt; print(bcrypt.hashpw(b'$(grep ADMIN_PASSWORD .env | cut -d= -f2)', bcrypt.gensalt()).decode())")
-    sed -i "s/^ADMIN_PASSWORD=.*/ADMIN_PASSWORD_HASH=$HASH/" .env
-    echo "Admin password hash generated. Please keep your .env file secure."
+    ADMIN_PASS=$(grep -oP '^ADMIN_PASSWORD=\K.*' .env)
+    if [ -n "$ADMIN_PASS" ]; then
+        HASH=$(python3 -c "import bcrypt; print(bcrypt.hashpw(b'$ADMIN_PASS', bcrypt.gensalt()).decode())")
+        sed -i "s/^ADMIN_PASSWORD=.*/ADMIN_PASSWORD_HASH=$HASH/" .env
+        echo "Admin password hash generated. Please keep your .env file secure."
+    else
+        echo "Warning: ADMIN_PASSWORD not found in .env. Please set it and run install.sh again."
+    fi
 fi
 
 echo "Installation complete!"

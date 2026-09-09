@@ -17,15 +17,34 @@ class TranscriptionService:
 
     def transcribe_stream(self, audio_chunks):
         if not self.api_key:
-            return self._mock_transcription(audio_chunks)
+            for _ in audio_chunks:
+                yield self._mock_transcription([])
+            return
         
         try:
-            config = aai.TranscriptionConfig(speech_model=aai.SpeechModel.best)
-            transcript = self.transcriber.transcribe(audio_chunks, config)
-            return transcript.text if transcript else ""
+            if isinstance(audio_chunks, list):
+                import tempfile
+                import wave
+                import os
+                with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
+                    tmp_path = tmp.name
+                    with wave.open(tmp_path, 'wb') as wf:
+                        wf.setnchannels(1)
+                        wf.setsampwidth(2)
+                        wf.setframerate(16000)
+                        for chunk in audio_chunks:
+                            wf.writeframes(chunk.tobytes())
+                config = aai.TranscriptionConfig(speech_model=aai.SpeechModel.best)
+                transcript = self.transcriber.transcribe(tmp_path, config)
+                os.unlink(tmp_path)
+                yield transcript.text if transcript else ""
+            else:
+                config = aai.TranscriptionConfig(speech_model=aai.SpeechModel.best)
+                transcript = self.transcriber.transcribe(audio_chunks, config)
+                yield transcript.text if transcript else ""
         except Exception as e:
             logger.error(f"Transcription error: {e}")
-            return f"[Error: {str(e)}]"
+            yield f"[Error: {str(e)}]"
 
     def _mock_transcription(self, chunks):
         phrases = ["Hello world", "Testing transcription", "Production ready", "Mock data stream"]

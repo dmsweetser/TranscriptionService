@@ -20,11 +20,12 @@ class TranslationService:
         self.translator = GoogleTranslator(source='auto', target='en')
 
     def translate(self, text, target_lang='en'):
-        if not text:
+        if not text or not text.strip():
             return ""
         try:
             lang_code = LANG_CODE_MAP.get(target_lang, target_lang)
-            return self.translator.translate(text, target=lang_code)
+            translated = self.translator.translate(text, target=lang_code)
+            return translated if translated else text
         except Exception as e:
             logger.error(f"Translation error: {e}")
-            return f"[Error: {str(e)}]"
+            return text

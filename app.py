@@ -18,10 +18,14 @@ from translation_service import TranslationService
 # Load environment variables
 load_dotenv()
 
-# Configure logging
+# Configure logging for production
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("app.log"),
+        logging.StreamHandler()
+    ]
 )
 logger = logging.getLogger(__name__)
 

@@ -4,6 +4,7 @@ import logging
 import json
 import time
 import queue
+import secrets
 from flask import Flask, render_template, request, jsonify, session, Response
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -19,11 +20,12 @@ from translation_service import TranslationService
 load_dotenv()
 
 # Configure logging for production
+from logging.handlers import RotatingFileHandler
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("app.log"),
+        RotatingFileHandler("app.log", maxBytes=10*1024*1024, backupCount=5),
         logging.StreamHandler()
     ]
 )
@@ -31,15 +33,8 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)
-secret_key = os.getenv('SECRET_KEY')
-if not secret_key:
-    import secrets
-    secret_key = secrets.token_hex(32)
-    env_path = os.path.join(os.path.dirname(__file__), '.env')
-    with open(env_path, 'a') as f:
-        f.write(f"\nSECRET_KEY={secret_key}\n")
-    logger.info("Generated new SECRET_KEY. Restart the application.")
-app.secret_key = secret_key
+# Use secure secret key from env or generate securely at runtime
+app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
 
 # Initialize services
 audio_streamer = None
@@ -108,7 +103,7 @@ def stop_service():
     logger.info("Service stopped")
 
 def generate_session_id():
-    return f"session_{int(time.time())}_{os.urandom(4).hex()}"
+    return f"session_{int(time.time())}_{secrets.token_urlsafe(16)}"
 
 def save_transcription(session_id, text):
     save_location = os.getenv("SAVE_LOCATION", "./transcriptions")
@@ -196,18 +191,19 @@ def admin():
 def authenticate():
     password = request.json.get('password')
     stored_hash = os.getenv("ADMIN_PASSWORD_HASH")
-    if not stored_hash:
-        if password == os.getenv("ADMIN_PASSWORD"):
-            session['authenticated'] = True
-            return jsonify({"authenticated": True})
-        return jsonify({"authenticated": False}), 401
     
-    try:
-        if bcrypt.checkpw(password.encode('utf-8'), stored_hash.encode('utf-8')):
-            session['authenticated'] = True
-            return jsonify({"authenticated": True})
-    except Exception as e:
-        logger.error(f"Auth error: {e}")
+    if stored_hash:
+        try:
+            if bcrypt.checkpw(password.encode('utf-8'), stored_hash.encode('utf-8')):
+                session['authenticated'] = True
+                return jsonify({"authenticated": True})
+        except Exception as e:
+            logger.error(f"Auth error: {e}")
+    elif os.getenv("ADMIN_PASSWORD") and password == os.getenv("ADMIN_PASSWORD"):
+        # Fallback for legacy setups only
+        session['authenticated'] = True
+        return jsonify({"authenticated": True})
+        
     return jsonify({"authenticated": False}), 401
 
 @app.route('/admin/logout', methods=['POST'])

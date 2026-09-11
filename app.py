@@ -110,7 +110,8 @@ def save_transcription(session_id, text):
     os.makedirs(save_location, exist_ok=True)
     filename = os.path.join(save_location, f"{session_id}.txt")
     with open(filename, 'a') as f:
-        f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {text}\n")
+        f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {text}
+")
 
 def get_transcription(session_id):
     save_location = os.getenv("SAVE_LOCATION", "./transcriptions")
@@ -123,11 +124,16 @@ def get_transcription(session_id):
 def persist_config(config):
     env_path = os.path.join(os.path.dirname(__file__), '.env')
     with open(env_path, 'w') as f:
-        f.write(f"DEFAULT_AUDIO_DEVICE={config.get('audio_device', 'Default Audio Device')}\n")
-        f.write(f"TRANSCRIPTION_PORT={config.get('transcription_port', 5123)}\n")
-        f.write(f"TRANSLATION_PORT={config.get('translation_port', 5001)}\n")
-        f.write(f"BIAS_WORDS={','.join(config.get('bias_words', []))}\n")
-        f.write(f"SAVE_LOCATION={config.get('save_location', './transcriptions')}\n")
+        f.write(f"DEFAULT_AUDIO_DEVICE={config.get('audio_device', 'Default Audio Device')}
+")
+        f.write(f"TRANSCRIPTION_PORT={config.get('transcription_port', 5123)}
+")
+        f.write(f"TRANSLATION_PORT={config.get('translation_port', 5001)}
+")
+        f.write(f"BIAS_WORDS={','.join(config.get('bias_words', []))}
+")
+        f.write(f"SAVE_LOCATION={config.get('save_location', './transcriptions')}
+")
     load_dotenv(env_path)
 
 @app.route('/api/audio_devices', methods=['GET'])
@@ -152,7 +158,9 @@ def transcription_stream():
                 data = q.get()
                 if data is None:
                     break
-                yield f"data: {json.dumps(data)}\n\n"
+                yield f"data: {json.dumps(data)}
+
+"
         return Response(generate(), mimetype='text/event-stream')
     except GeneratorExit:
         with session_lock:
@@ -171,7 +179,9 @@ def translation_stream(lang):
                 if data is None:
                     break
                 if data.get('type') == 'translation' and data.get('lang') == lang:
-                    yield f"data: {json.dumps(data)}\n\n"
+                    yield f"data: {json.dumps(data)}
+
+"
         return Response(generate(), mimetype='text/event-stream')
     except GeneratorExit:
         with session_lock:
@@ -217,7 +227,7 @@ def admin_config():
         return jsonify({"error": "Unauthorized"}), 401
     return jsonify({
         "audio_device": os.getenv("DEFAULT_AUDIO_DEVICE", "Default Audio Device"),
-        "transcription_port": os.getenv("TRANSCRIPTION_PORT", 5000),
+        "transcription_port": os.getenv("TRANSCRIPTION_PORT", 5123),
         "translation_port": os.getenv("TRANSLATION_PORT", 5001),
         "bias_words": os.getenv("BIAS_WORDS", "").split(","),
         "save_location": os.getenv("SAVE_LOCATION", "./transcriptions")
@@ -278,7 +288,7 @@ def get_translation_stream(session_id, language):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='TranscriptionService')
     parser.add_argument('--mock', action='store_true', help='Enable mock endpoints')
-    parser.add_argument('--port', type=int, default=5000, help='Port to run on')
+    parser.add_argument('--port', type=int, default=5123, help='Port to run on')
     args = parser.parse_args()
     
     if args.mock:

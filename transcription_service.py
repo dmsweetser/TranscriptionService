@@ -22,26 +22,22 @@ class TranscriptionService:
             return
         
         try:
-            if isinstance(audio_chunks, list):
-                import tempfile
-                import wave
-                import os
-                with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
-                    tmp_path = tmp.name
-                    with wave.open(tmp_path, 'wb') as wf:
-                        wf.setnchannels(1)
-                        wf.setsampwidth(2)
-                        wf.setframerate(16000)
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
+                tmp_path = tmp.name
+                with wave.open(tmp_path, 'wb') as wf:
+                    wf.setnchannels(1)
+                    wf.setsampwidth(2)
+                    wf.setframerate(16000)
+                    if isinstance(audio_chunks, np.ndarray):
+                        wf.writeframes(audio_chunks.tobytes())
+                    else:
                         for chunk in audio_chunks:
                             wf.writeframes(chunk.tobytes())
-                config = aai.TranscriptionConfig(speech_model=aai.SpeechModel.best)
-                transcript = self.transcriber.transcribe(tmp_path, config)
-                os.unlink(tmp_path)
-                yield transcript.text if transcript else ""
-            else:
-                config = aai.TranscriptionConfig(speech_model=aai.SpeechModel.best)
-                transcript = self.transcriber.transcribe(audio_chunks, config)
-                yield transcript.text if transcript else ""
+            config = aai.TranscriptionConfig(speech_model=aai.SpeechModel.best)
+            transcript = self.transcriber.transcribe(tmp_path, config)
+            os.unlink(tmp_path)
+            yield transcript.text if transcript else ""
         except Exception as e:
             logger.error(f"Transcription error: {e}")
             yield f"[Error: {str(e)}]"

@@ -12,7 +12,11 @@ if not exist requirements.txt (
 pip install -r requirements.txt --quiet
 
 REM Run with Gunicorn for production
-set PORT=%TRANSCRIPTION_PORT%
-if not defined PORT set PORT=5123
-gunicorn --bind 0.0.0.0:%PORT% --workers 4 --timeout 120 --log-level info app:app
+setlocal enabledelayedexpansion
+if defined TRANSCRIPTION_PORT (
+    set "PORT=!TRANSCRIPTION_PORT!"
+) else (
+    set "PORT=5123"
+)
+gunicorn --bind 0.0.0.0:!PORT! --workers 4 --timeout 120 --log-level info app:app
 pause

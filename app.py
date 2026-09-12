@@ -124,6 +124,10 @@ def get_transcription(session_id):
 def persist_config(config):
     env_path = os.path.join(os.path.dirname(__file__), '.env')
     with open(env_path, 'w') as f:
+        f.write(f"ASSEMBLY_AI_API_KEY={config.get('assembly_ai_api_key') or os.getenv('ASSEMBLY_AI_API_KEY', '')}
+")
+        f.write(f"ADMIN_PASSWORD_HASH={config.get('admin_password_hash') or os.getenv('ADMIN_PASSWORD_HASH', '')}
+")
         f.write(f"DEFAULT_AUDIO_DEVICE={config.get('audio_device', 'Default Audio Device')}
 ")
         f.write(f"TRANSCRIPTION_PORT={config.get('transcription_port', 5123)}
@@ -230,7 +234,9 @@ def admin_config():
         "transcription_port": os.getenv("TRANSCRIPTION_PORT", 5123),
         "translation_port": os.getenv("TRANSLATION_PORT", 5001),
         "bias_words": os.getenv("BIAS_WORDS", "").split(","),
-        "save_location": os.getenv("SAVE_LOCATION", "./transcriptions")
+        "save_location": os.getenv("SAVE_LOCATION", "./transcriptions"),
+        "assembly_ai_api_key": os.getenv("ASSEMBLY_AI_API_KEY", ""),
+        "admin_password_hash": os.getenv("ADMIN_PASSWORD_HASH", "")
     })
 
 @app.route('/admin/config', methods=['POST'])

@@ -12,5 +12,4 @@ fi
 pip install -r requirements.txt --quiet
 
 # Run with Gunicorn for production
-PORT=${TRANSCRIPTION_PORT:-5123}
-gunicorn --bind 0.0.0.0:$PORT --workers 4 --timeout 120 --log-level info --access-logfile - --error-logfile - app:app
+gunicorn -c gunicorn.conf.py app:app

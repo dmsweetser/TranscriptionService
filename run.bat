@@ -18,5 +18,5 @@ if defined TRANSCRIPTION_PORT (
 ) else (
     set "PORT=5123"
 )
-gunicorn --bind 0.0.0.0:!PORT! --workers 4 --timeout 120 --log-level info app:app
+gunicorn -c gunicorn.conf.py app:app
 pause

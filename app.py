@@ -32,9 +32,21 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": ["http://localhost:5123", "http://localhost:5001"]}})
 # Use secure secret key from env or generate securely at runtime
 app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
+
+@app.after_request
+def add_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
+
+@app.route('/health')
+def health_check():
+    return jsonify({"status": "healthy"}), 200
 
 # Initialize services
 audio_streamer = None
@@ -123,22 +135,19 @@ def get_transcription(session_id):
 
 def persist_config(config):
     env_path = os.path.join(os.path.dirname(__file__), '.env')
+    env_vars = {
+        'ASSEMBLY_AI_API_KEY': config.get('assembly_ai_api_key', ''),
+        'ADMIN_PASSWORD_HASH': config.get('admin_password_hash', ''),
+        'DEFAULT_AUDIO_DEVICE': config.get('audio_device', 'Default Audio Device'),
+        'TRANSCRIPTION_PORT': config.get('transcription_port', 5123),
+        'TRANSLATION_PORT': config.get('translation_port', 5001),
+        'BIAS_WORDS': ','.join(config.get('bias_words', [])),
+        'SAVE_LOCATION': config.get('save_location', './transcriptions')
+    }
     with open(env_path, 'w') as f:
-        f.write(f"ASSEMBLY_AI_API_KEY={config.get('assembly_ai_api_key') or os.getenv('ASSEMBLY_AI_API_KEY', '')}
-")
-        f.write(f"ADMIN_PASSWORD_HASH={config.get('admin_password_hash') or os.getenv('ADMIN_PASSWORD_HASH', '')}
-")
-        f.write(f"DEFAULT_AUDIO_DEVICE={config.get('audio_device', 'Default Audio Device')}
-")
-        f.write(f"TRANSCRIPTION_PORT={config.get('transcription_port', 5123)}
-")
-        f.write(f"TRANSLATION_PORT={config.get('translation_port', 5001)}
-")
-        f.write(f"BIAS_WORDS={','.join(config.get('bias_words', []))}
-")
-        f.write(f"SAVE_LOCATION={config.get('save_location', './transcriptions')}
-")
-    load_dotenv(env_path)
+        for key, value in env_vars.items():
+            f.write(f"{key}={value}\n")
+    load_dotenv(env_path, override=True)
 
 @app.route('/api/audio_devices', methods=['GET'])
 def get_audio_devices():

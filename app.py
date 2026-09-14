@@ -32,7 +32,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": ["http://localhost:5123", "http://localhost:5001"]}})
+allowed_origins = [origin.strip() for origin in os.getenv('ALLOWED_ORIGINS', 'http://localhost:5123,http://localhost:5001').split(',')]
+CORS(app, resources={r"/*": {"origins": allowed_origins}})
 # Use secure secret key from env or generate securely at runtime
 app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
 
@@ -46,7 +47,11 @@ def add_security_headers(response):
 
 @app.route('/health')
 def health_check():
-    return jsonify({"status": "healthy"}), 200
+    return jsonify({
+        "status": "healthy",
+        "service_running": service_running,
+        "sessions_active": len(session_queues)
+    }), 200
 
 # Initialize services
 audio_streamer = None
@@ -75,7 +80,7 @@ def start_service(restart=False):
         return
     if service_running:
         stop_service()
-        time.sleep(0.5)
+        time.sleep(1)
     service_running = True
     device_name = os.getenv("DEFAULT_AUDIO_DEVICE", "Default Audio Device")
     audio_streamer = AudioStreamer(device_name=device_name)
@@ -112,6 +117,7 @@ def stop_service():
     service_running = False
     if audio_streamer:
         audio_streamer.stop()
+        time.sleep(0.5)
     logger.info("Service stopped")
 
 def generate_session_id():
@@ -122,8 +128,7 @@ def save_transcription(session_id, text):
     os.makedirs(save_location, exist_ok=True)
     filename = os.path.join(save_location, f"{session_id}.txt")
     with open(filename, 'a') as f:
-        f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {text}
-")
+        f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {text}\n")
 
 def get_transcription(session_id):
     save_location = os.getenv("SAVE_LOCATION", "./transcriptions")
@@ -222,8 +227,9 @@ def authenticate():
                 return jsonify({"authenticated": True})
         except Exception as e:
             logger.error(f"Auth error: {e}")
+            return jsonify({"error": "Authentication service error"}), 500
     elif os.getenv("ADMIN_PASSWORD") and password == os.getenv("ADMIN_PASSWORD"):
-        # Fallback for legacy setups only
+        logger.warning("Using legacy plain-text password fallback. Migrate to ADMIN_PASSWORD_HASH.")
         session['authenticated'] = True
         return jsonify({"authenticated": True})
         
@@ -292,12 +298,15 @@ def get_connections():
 
 @app.route('/transcription/<session_id>', methods=['GET'])
 def get_transcription_stream(session_id):
+    if 'authenticated' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
     text = get_transcription(session_id)
     return jsonify({"transcription": text})
 
 @app.route('/translation/<session_id>/<language>', methods=['GET'])
 def get_translation_stream(session_id, language):
-    # In a real implementation, this would return the translation for the specified language
+    if 'authenticated' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
     return jsonify({"translation": f"Translation for {language} in session {session_id}"})
 
 if __name__ == '__main__':

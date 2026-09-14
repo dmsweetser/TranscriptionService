@@ -31,10 +31,15 @@ class TranscriptionService:
                     wf.setsampwidth(2)
                     wf.setframerate(16000)
                     if isinstance(audio_chunks, np.ndarray):
+                        # Convert float32 audio chunks to int16 for WAV compatibility
+                        if audio_chunks.dtype != np.int16:
+                            audio_chunks = (audio_chunks * 32767).astype(np.int16)
                         wf.writeframes(audio_chunks.tobytes())
                     else:
-                        for chunk in audio_chunks:
-                            wf.writeframes(chunk.tobytes())
+                        combined = np.concatenate([chunk.flatten() for chunk in audio_chunks])
+                        if combined.dtype != np.int16:
+                            combined = (combined * 32767).astype(np.int16)
+                        wf.writeframes(combined.tobytes())
             config = aai.TranscriptionConfig(speech_model=aai.SpeechModel.best)
             transcript = self.transcriber.transcribe(tmp_path, config)
             os.unlink(tmp_path)
@@ -55,9 +60,14 @@ class TranscriptionService:
             if chunk is not None:
                 buffer.append(chunk)
                 if len(buffer) >= chunk_size:
-                    text = self.transcribe_stream(np.concatenate(buffer))
-                    buffer = []
-                    if text:
-                        yield text
+                    try:
+                        combined = np.concatenate(buffer)
+                        text = self.transcribe_stream(combined)
+                        buffer = []
+                        if text:
+                            yield text
+                    except Exception as e:
+                        logger.error(f"Buffer processing error: {e}")
+                        buffer = []
             else:
                 time.sleep(0.1)

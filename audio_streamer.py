@@ -45,6 +45,8 @@ class AudioStreamer:
     def _callback(self, indata, frames, time, status):
         if status:
             logger.warning(f"Stream status: {status}")
+        if indata.size == 0:
+            return
         data = indata.flatten()
         self.queue.put(data)
 

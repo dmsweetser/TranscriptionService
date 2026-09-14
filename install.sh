@@ -17,9 +17,19 @@ if ! grep -q "ADMIN_PASSWORD_HASH" .env; then
     echo "Generating secure admin password hash..."
     ADMIN_PASS=$(grep -oP '^ADMIN_PASSWORD=\K.*' .env)
     if [ -n "$ADMIN_PASS" ]; then
-        HASH=$(python3 -c "import bcrypt; print(bcrypt.hashpw(b'$ADMIN_PASS', bcrypt.gensalt()).decode())")
-        sed -i "s/^ADMIN_PASSWORD=.*/ADMIN_PASSWORD_HASH=$HASH/" .env
-        echo "Admin password hash generated. Please keep your .env file secure."
+        HASH=$(python3 -c "
+import bcrypt, os
+password = os.environ.get('ADMIN_PASS', '')
+if password:
+    hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    print(hashed)
+" ADMIN_PASS="$ADMIN_PASS")
+        if [ -n "$HASH" ]; then
+            sed -i "s/^ADMIN_PASSWORD=.*/ADMIN_PASSWORD_HASH=$HASH/" .env
+            echo "Admin password hash generated. Please keep your .env file secure."
+        else
+            echo "Warning: Failed to generate hash."
+        fi
     else
         echo "Warning: ADMIN_PASSWORD not found in .env. Please set it and run install.sh again."
     fi

@@ -21,18 +21,20 @@ load_dotenv()
 
 # Configure logging for production
 from logging.handlers import RotatingFileHandler
+log_dir = os.path.dirname(os.path.abspath(__file__))
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        RotatingFileHandler("app.log", maxBytes=10*1024*1024, backupCount=5),
+        RotatingFileHandler(os.path.join(log_dir, "app.log"), maxBytes=10*1024*1024, backupCount=5),
         logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-allowed_origins = [origin.strip() for origin in os.getenv('ALLOWED_ORIGINS', 'http://localhost:5123,http://localhost:5001').split(',')]
+allowed_origins_raw = os.getenv('ALLOWED_ORIGINS', 'http://localhost:5123,http://localhost:5001')
+allowed_origins = [origin.strip() for origin in allowed_origins_raw.split(',') if origin.strip()]
 CORS(app, resources={r"/*": {"origins": allowed_origins}})
 # Use secure secret key from env or generate securely at runtime
 app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
@@ -89,6 +91,9 @@ def start_service(restart=False):
     def worker():
         global service_running
         try:
+            if not audio_streamer:
+                logger.error("Audio streamer not initialized")
+                return
             for text in transcription_service.stream_transcription(audio_streamer):
                 if not service_running: break
                 logger.info(f"Transcription: {text}")
@@ -116,7 +121,10 @@ def stop_service():
         return
     service_running = False
     if audio_streamer:
-        audio_streamer.stop()
+        try:
+            audio_streamer.stop()
+        except Exception as e:
+            logger.error(f"Error stopping audio streamer: {e}")
         time.sleep(0.5)
     logger.info("Service stopped")
 

@@ -85,9 +85,14 @@ def start_service(restart=False):
         time.sleep(1)
     service_running = True
     device_name = os.getenv("DEFAULT_AUDIO_DEVICE", "Default Audio Device")
-    audio_streamer = AudioStreamer(device_name=device_name)
-    audio_streamer.start()
-    
+    try:
+        audio_streamer = AudioStreamer(device_name=device_name)
+        audio_streamer.start()
+    except Exception as e:
+        logger.error(f"Failed to start audio streamer: {e}")
+        service_running = False
+        return
+
     def worker():
         global service_running
         try:
@@ -126,6 +131,7 @@ def stop_service():
         except Exception as e:
             logger.error(f"Error stopping audio streamer: {e}")
         time.sleep(0.5)
+        audio_streamer = None
     logger.info("Service stopped")
 
 def generate_session_id():

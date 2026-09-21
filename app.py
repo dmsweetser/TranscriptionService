@@ -323,6 +323,15 @@ def get_translation_stream(session_id, language):
         return jsonify({"error": "Unauthorized"}), 401
     return jsonify({"translation": f"Translation for {language} in session {session_id}"})
 
+import signal
+
+def shutdown_handler(signum, frame):
+    logger.info("Shutdown signal received. Stopping service...")
+    stop_service()
+
+signal.signal(signal.SIGTERM, shutdown_handler)
+signal.signal(signal.SIGINT, shutdown_handler)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='TranscriptionService')
     parser.add_argument('--mock', action='store_true', help='Enable mock endpoints')

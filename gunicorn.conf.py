@@ -12,3 +12,7 @@ preload_app = False
 max_requests = 1000
 max_requests_jitter = 50
 worker_class = 'sync'
+
+def on_exit(server):
+    logger.info("Gunicorn master exiting. Cleaning up global resources...")
+    # Graceful shutdown is handled via signal handlers in app.py

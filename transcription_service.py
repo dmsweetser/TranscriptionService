@@ -3,58 +3,76 @@ import numpy as np
 import os
 import logging
 import time
-import random
 import wave
+import tempfile
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class TranscriptionService:
     def __init__(self):
         self.api_key = os.getenv("ASSEMBLY_AI_API_KEY")
+        self.bias_words = [
+            w.strip()
+            for w in os.getenv("BIAS_WORDS", "").split(",")
+            if w.strip()
+        ]
         if not self.api_key:
-            logger.warning("Assembly AI API key not found. Transcription will be mocked.")
+            logger.warning(
+                "Assembly AI API key not found. Transcription will be mocked."
+            )
         self.transcriber = aai.Transcriber() if self.api_key else None
 
-    def transcribe_stream(self, audio_chunks):
+    def _mock_transcription(self):
+        phrases = [
+            "Hello world",
+            "Testing transcription",
+            "Production ready",
+            "Mock data stream",
+        ]
+        return phrases[hash(time.time()) % len(phrases)]
+
+    def transcribe_chunk(self, audio_data):
+        """Transcribe a single numpy audio chunk. Returns a string."""
         if not self.api_key:
-            for _ in audio_chunks:
-                yield self._mock_transcription([])
-            return
-        
+            return self._mock_transcription()
+
         try:
-            import tempfile
-            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
+            with tempfile.NamedTemporaryFile(
+                suffix=".wav", delete=False
+            ) as tmp:
                 tmp_path = tmp.name
-                with wave.open(tmp_path, 'wb') as wf:
+                with wave.open(tmp_path, "wb") as wf:
                     wf.setnchannels(1)
                     wf.setsampwidth(2)
                     wf.setframerate(16000)
-                    if isinstance(audio_chunks, np.ndarray):
-                        # Convert float32 audio chunks to int16 for WAV compatibility
-                        if audio_chunks.dtype != np.int16:
-                            audio_chunks = (audio_chunks * 32767).astype(np.int16)
-                        wf.writeframes(audio_chunks.tobytes())
-                    else:
-                        combined = np.concatenate([chunk.flatten() for chunk in audio_chunks])
-                        if combined.dtype != np.int16:
-                            combined = (combined * 32767).astype(np.int16)
-                        wf.writeframes(combined.tobytes())
-            config = aai.TranscriptionConfig(speech_model=aai.SpeechModel.best)
-            transcript = self.transcriber.transcribe(tmp_path, config)
-            os.unlink(tmp_path)
-            yield transcript.text if transcript else ""
-        except Exception as e:
-            logger.error(f"Transcription error: {e}")
-            yield f"[Error: {str(e)}]"
+                    if audio_data.dtype != np.int16:
+                        audio_data = (
+                            audio_data * 32767
+                        ).astype(np.int16)
+                    wf.writeframes(audio_data.tobytes())
 
-    def _mock_transcription(self, chunks):
-        phrases = ["Hello world", "Testing transcription", "Production ready", "Mock data stream"]
-        return random.choice(phrases)
+            config = aai.TranscriptionConfig()
+            if self.bias_words:
+                config.set_word_boost(self.bias_words)
+
+            transcript = self.transcriber.transcribe(
+                tmp_path, config=config
+            )
+            os.unlink(tmp_path)
+            return transcript.text if transcript and transcript.text else ""
+        except Exception as e:
+            logger.error("Transcription error: %s", e)
+            return f"[Error: {e}]"
 
     def stream_transcription(self, audio_streamer):
+        """Continuously collect audio chunks and transcribe them.
+
+        Yields completed transcription text as it becomes available.
+        """
         buffer = []
-        chunk_size = audio_streamer.sample_rate
+        chunk_size = audio_streamer.sample_rate  # ~1 second of audio
         while True:
             chunk = audio_streamer.get_audio_chunk()
             if chunk is not None:
@@ -62,12 +80,12 @@ class TranscriptionService:
                 if len(buffer) >= chunk_size:
                     try:
                         combined = np.concatenate(buffer)
-                        text = self.transcribe_stream(combined)
+                        text = self.transcribe_chunk(combined)
                         buffer = []
                         if text:
                             yield text
                     except Exception as e:
-                        logger.error(f"Buffer processing error: {e}")
+                        logger.error("Buffer processing error: %s", e)
                         buffer = []
             else:
-                time.sleep(0.1)
+                time.sleep(0.05)

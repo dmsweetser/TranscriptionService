@@ -1,4 +1,11 @@
 #!/bin/bash
+set -e
+
+# ─── TranscriptionService – Linux/macOS Run Script ───
+# Usage: ./run.sh
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
 # Activate virtual environment
 source venv/bin/activate
@@ -9,7 +16,7 @@ if [ ! -f requirements.txt ]; then
     exit 1
 fi
 
-pip install -r requirements.txt --quiet
+pip install -r requirements.txt --quiet 2>/dev/null || true
 
 # Run with Gunicorn for production
-gunicorn -c gunicorn.conf.py app:app
+exec gunicorn -c gunicorn.conf.py app:app

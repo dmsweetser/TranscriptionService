@@ -6,158 +6,337 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Transcription Service - User Interface</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Live Transcription</title>
     <style>
-        #transcription, #translation {
-            height: 300px;
-            overflow-y: auto;
-            background: #f8f9fa;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --border: #2a2d3a;
+            --text: #e4e4e7;
+            --text-dim: #a1a1aa;
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --green: #22c55e;
+            --red: #ef4444;
+            --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
-        .auto-scroll {
-            overflow-y: auto;
-            max-height: 300px;
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
-        .status-indicator {
-            width: 10px;
-            height: 10px;
+
+        /* Header */
+        .header {
+            padding: 16px 20px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
-            display: inline-block;
-            margin-right: 5px;
+            background: var(--red);
+            transition: background 0.3s;
         }
-        .status-active { background-color: green; }
-        .status-inactive { background-color: red; }
+
+        .status-dot.connected {
+            background: var(--green);
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+        }
+
+        /* Language tabs */
+        .lang-tabs {
+            display: flex;
+            gap: 4px;
+            padding: 12px 20px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .lang-tab {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            color: var(--text-dim);
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            font-family: var(--font);
+        }
+
+        .lang-tab:hover {
+            background: var(--accent-glow);
+            color: var(--text);
+        }
+
+        .lang-tab.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* Transcription area */
+        .transcription-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            scroll-behavior: smooth;
+        }
+
+        .sentence {
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 16px;
+            line-height: 1.6;
+            animation: fadeIn 0.3s ease;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .sentence.translation {
+            border-left: 3px solid var(--accent);
+            font-size: 15px;
+            color: var(--text-dim);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .placeholder {
+            text-align: center;
+            color: var(--text-dim);
+            padding: 60px 20px;
+            font-size: 15px;
+        }
+
+        /* Footer */
+        .footer {
+            padding: 12px 20px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .header h1 { font-size: 16px; }
+            .sentence { font-size: 15px; padding: 8px 12px; }
+            .transcription-area { padding: 12px; }
+        }
     </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <h1 class="text-center">Transcription Service</h1>
-        <div class="text-center mb-3">
-            <span id="connectionStatus" class="status-indicator status-inactive"></span>
-            <span id="statusText">Disconnected</span>
-        </div>
-        
-        <div class="row mt-4">
-            <div class="col-md-6">
-                <h3>Transcription Stream</h3>
-                <div id="transcription" class="border p-3 bg-light auto-scroll">
-                    <p>Waiting for transcription...</p>
-                </div>
-            </div>
-            
-            <div class="col-md-6">
-                <h3>Translation Stream</h3>
-                <div id="translation" class="border p-3 bg-light auto-scroll">
-                    <p>Waiting for translation...</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="row mt-4">
-            <div class="col-12">
-                <h3>Language Selection</h3>
-                <div class="btn-group" role="group" id="langButtons">
-                    <button type="button" class="btn btn-outline-primary active" onclick="selectLanguage('English')">English</button>
-                    <button type="button" class="btn btn-outline-primary" onclick="selectLanguage('French')">French</button>
-                    <button type="button" class="btn btn-outline-primary" onclick="selectLanguage('Spanish')">Spanish</button>
-                    <button type="button" class="btn btn-outline-primary" onclick="selectLanguage('Arabic')">Arabic</button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="row mt-4">
-            <div class="col-12">
-                <h3>QR Code Access</h3>
-                <div class="text-center">
-                    <img id="qrCode" src="" alt="QR Code" class="img-thumbnail">
-                    <p>Scan this QR code to access the stream on mobile</p>
-                </div>
-            </div>
+    <div class="header">
+        <h1 id="pageTitle">Live Transcription</h1>
+        <div class="status">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Connecting...</span>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <div class="lang-tabs" id="langTabs">
+        <button class="lang-tab active" data-lang="English">English</button>
+        <button class="lang-tab" data-lang="French">French</button>
+        <button class="lang-tab" data-lang="Spanish">Spanish</button>
+        <button class="lang-tab" data-lang="Arabic">Arabic</button>
+        <button class="lang-tab" data-lang="German">German</button>
+        <button class="lang-tab" data-lang="Italian">Italian</button>
+        <button class="lang-tab" data-lang="Japanese">Japanese</button>
+        <button class="lang-tab" data-lang="Korean">Korean</button>
+    </div>
+
+    <div class="transcription-area" id="transcriptionArea">
+        <div class="placeholder">Waiting for transcription...</div>
+    </div>
+
+    <div class="footer">
+        TranscriptionService &middot; Scroll up for history &middot; Auto-scrolls when at bottom
+    </div>
+
     <script>
-        let currentLanguage = 'English';
+        const area = document.getElementById('transcriptionArea');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const langTabs = document.getElementById('langTabs');
+        const pageTitle = document.getElementById('pageTitle');
+
+        let currentLang = 'English';
         let transcriptionSource = null;
         let translationSource = null;
-        let autoScroll = true;
+        let atBottom = true;
+        let hasContent = false;
+        let reconnectTimer = null;
 
-        function selectLanguage(language) {
-            currentLanguage = language;
-            document.querySelectorAll('#langButtons .btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            if (translationSource) {
-                translationSource.close();
-                startTranslationStream();
+        // Detect if user is at bottom
+        function checkBottom() {
+            const threshold = 50;
+            atBottom = (area.scrollTop + area.clientHeight >= area.scrollHeight - threshold);
+        }
+
+        function scrollToBottom() {
+            if (atBottom) {
+                area.scrollTop = area.scrollHeight;
             }
         }
 
-        function handleScroll() {
-            const transcription = document.getElementById('transcription');
-            const translation = document.getElementById('translation');
-            autoScroll = (transcription.scrollTop + transcription.clientHeight >= transcription.scrollHeight - 5) &&
-                         (translation.scrollTop + translation.clientHeight >= translation.scrollHeight - 5);
+        // Auto-scroll on new content
+        function appendSentence(html, isTranslation = false) {
+            // Remove placeholder on first content
+            if (!hasContent) {
+                area.innerHTML = '';
+                hasContent = true;
+            }
+
+            const p = document.createElement('div');
+            p.className = 'sentence' + (isTranslation ? ' translation' : '');
+            p.innerHTML = html;
+            area.appendChild(p);
+
+            // Keep max 200 sentences to prevent memory issues
+            while (area.children.length > 200) {
+                area.removeChild(area.firstChild);
+            }
+
+            scrollToBottom();
         }
 
-        function updateTranscription(text) {
-            const transcription = document.getElementById('transcription');
-            transcription.innerHTML += `<p>${text}</p>`;
-            if (autoScroll) transcription.scrollTop = transcription.scrollHeight;
-        }
+        // Language tab switching
+        langTabs.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('lang-tab')) return;
+            langTabs.querySelector('.active').classList.remove('active');
+            e.target.classList.add('active');
+            currentLang = e.target.dataset.lang;
+            pageTitle.textContent = `Live ${currentLang} Transcription`;
+            restartTranslationStream();
+        });
 
-        function updateTranslation(text) {
-            const translation = document.getElementById('translation');
-            translation.innerHTML += `<p>[${currentLanguage}] ${text}</p>`;
-            if (autoScroll) translation.scrollTop = translation.scrollHeight;
+        // Scroll handling
+        area.addEventListener('scroll', checkBottom);
+
+        // Resume auto-scroll on touch/click at bottom
+        area.addEventListener('touchstart', checkBottom);
+        area.addEventListener('mousedown', checkBottom);
+
+        // Reconnect logic
+        function scheduleReconnect() {
+            if (reconnectTimer) return;
+            reconnectTimer = setTimeout(() => {
+                reconnectTimer = null;
+                startStreams();
+            }, 3000);
         }
 
         function startTranscriptionStream() {
-            if (transcriptionSource) transcriptionSource.close();
+            if (transcriptionSource) {
+                transcriptionSource.close();
+            }
             transcriptionSource = new EventSource('/api/transcription/stream');
-            transcriptionSource.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-                document.getElementById('connectionStatus').className = 'status-indicator status-active';
-                document.getElementById('statusText').innerText = 'Connected';
-                if (data.type === 'transcription') updateTranscription(data.text);
+
+            transcriptionSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'transcription') {
+                        statusDot.classList.add('connected');
+                        statusText.textContent = 'Connected';
+                        appendSentence(escapeHtml(data.text));
+                    }
+                } catch (e) {
+                    // ignore parse errors (keepalive etc)
+                }
             };
-            transcriptionSource.onerror = function() {
-                document.getElementById('connectionStatus').className = 'status-indicator status-inactive';
-                document.getElementById('statusText').innerText = 'Disconnected';
-                setTimeout(startTranscriptionStream, 3000);
+
+            transcriptionSource.onerror = () => {
+                statusDot.classList.remove('connected');
+                statusText.textContent = 'Reconnecting...';
+                scheduleReconnect();
             };
         }
 
         function startTranslationStream() {
-            if (translationSource) translationSource.close();
-            translationSource = new EventSource(`/api/translation/stream/${currentLanguage}`);
-            translationSource.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-                document.getElementById('connectionStatus').className = 'status-indicator status-active';
-                document.getElementById('statusText').innerText = 'Connected';
-                if (data.type === 'translation') updateTranslation(data.text);
+            if (translationSource) {
+                translationSource.close();
+            }
+            translationSource = new EventSource(`/api/translation/stream/${currentLang}`);
+
+            translationSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'translation') {
+                        statusDot.classList.add('connected');
+                        statusText.textContent = `Connected — ${currentLang}`;
+                        appendSentence(escapeHtml(data.text), true);
+                    }
+                } catch (e) {
+                    // ignore
+                }
             };
-            translationSource.onerror = function() {
-                document.getElementById('connectionStatus').className = 'status-indicator status-inactive';
-                document.getElementById('statusText').innerText = 'Disconnected';
-                setTimeout(startTranslationStream, 3000);
+
+            translationSource.onerror = () => {
+                statusDot.classList.remove('connected');
+                statusText.textContent = 'Reconnecting...';
+                scheduleReconnect();
             };
         }
 
-        document.getElementById('transcription').addEventListener('scroll', handleScroll);
-        document.getElementById('translation').addEventListener('scroll', handleScroll);
-
-        const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
-        let urlBase = protocol + '://' + window.location.hostname;
-        if (window.location.port !== '' && window.location.port !== '5123') {
-            urlBase += ':' + window.location.port;
-        } else if (window.location.port === '') {
-            urlBase += ':5123';
+        function restartTranslationStream() {
+            if (translationSource) {
+                translationSource.close();
+            }
+            startTranslationStream();
         }
-        document.getElementById('qrCode').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(urlBase)}`;
 
-        startTranscriptionStream();
-        startTranslationStream();
+        function startStreams() {
+            startTranscriptionStream();
+            startTranslationStream();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Start on load
+        startStreams();
     </script>
 </body>
 </html>

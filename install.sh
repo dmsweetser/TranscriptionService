@@ -42,6 +42,6 @@ mkdir -p transcriptions
 
 echo ""
 echo "=== Installation complete! ==="
-echo "1. Edit .env with your settings (especially ASSEMBLY_AI_API_KEY and ADMIN_PASSWORD)"
+echo "1. Edit .env with your settings (especially ASSEMBLYAI_API_KEY and ADMIN_PASSWORD)"
 echo "2. Run: ./run.sh"
 echo ""

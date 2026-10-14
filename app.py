@@ -259,7 +259,7 @@ def persist_config(config):
 
     # Values to persist
     env_vars = {
-        "ASSEMBLY_AI_API_KEY": config.get("assembly_ai_api_key", ""),
+        "ASSEMBLYAI_API_KEY": config.get("ASSEMBLYAI_API_KEY", ""),
         "DEFAULT_AUDIO_DEVICE": config.get("audio_device", "Default Audio Device"),
         "TRANSCRIPTION_PORT": str(config.get("transcription_port", 5123)),
         "TRANSLATION_PORT": str(config.get("translation_port", 5001)),
@@ -366,7 +366,7 @@ def admin_config():
                 if w.strip()
             ],
             "save_location": os.getenv("SAVE_LOCATION", "./transcriptions"),
-            "assembly_ai_api_key": os.getenv("ASSEMBLY_AI_API_KEY", ""),
+            "ASSEMBLYAI_API_KEY": os.getenv("ASSEMBLYAI_API_KEY", ""),
             "service_running": service_running,
         }
     )

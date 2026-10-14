@@ -305,7 +305,7 @@
                     if (data.translation_port) document.getElementById('translationPort').value = data.translation_port;
                     if (data.bias_words) document.getElementById('biasWords').value = data.bias_words.join(', ');
                     if (data.save_location) document.getElementById('saveLocation').value = data.save_location;
-                    if (data.assembly_ai_api_key) document.getElementById('assemblyAiKey').value = data.assembly_ai_api_key;
+                    if (data.ASSEMBLYAI_API_KEY) document.getElementById('assemblyAiKey').value = data.ASSEMBLYAI_API_KEY;
                     if (data.service_running) updateServiceButtons(true);
                     document.getElementById('audioDevice').disabled = false;
                 })
@@ -317,7 +317,7 @@
             e.preventDefault();
             const config = {
                 audio_device: document.getElementById('audioDevice').value,
-                assembly_ai_api_key: document.getElementById('assemblyAiKey').value,
+                ASSEMBLYAI_API_KEY: document.getElementById('assemblyAiKey').value,
                 transcription_port: document.getElementById('transcriptionPort').value,
                 translation_port: document.getElementById('translationPort').value,
                 bias_words: document.getElementById('biasWords').value.split(',').map(w => w.trim()).filter(Boolean),

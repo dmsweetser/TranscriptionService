@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class TranscriptionService:
     def __init__(self):
-        self.api_key = os.getenv("ASSEMBLY_AI_API_KEY")
+        self.api_key = os.getenv("ASSEMBLYAI_API_KEY")
         self.bias_words = [
             w.strip()
             for w in os.getenv("BIAS_WORDS", "").split(",")

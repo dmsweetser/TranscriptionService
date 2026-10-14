@@ -24,7 +24,7 @@ install.bat
 Edit `.env` with your settings:
 
 ```env
-ASSEMBLY_AI_API_KEY=your_assembly_ai_key_here
+ASSEMBLYAI_API_KEY=your_assembly_ai_key_here
 ADMIN_PASSWORD=your_strong_password_here
 TRANSCRIPTION_PORT=5123
 TRANSLATION_PORT=5001
@@ -91,7 +91,7 @@ The service runs as a single-process Flask application behind Gunicorn (1 worker
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ASSEMBLY_AI_API_KEY` | *(empty)* | Your Assembly AI API key |
+| `ASSEMBLYAI_API_KEY` | *(empty)* | Your Assembly AI API key |
 | `ADMIN_PASSWORD` | *(empty)* | Plain-text password (migrated to hash) |
 | `ADMIN_PASSWORD_HASH` | *(empty)* | bcrypt hash of admin password |
 | `TRANSCRIPTION_PORT` | `5123` | Port for transcription/translation streams |

@@ -38,7 +38,7 @@
    ```
 2. Edit `.env` with your production values:
    ```env
-   ASSEMBLY_AI_API_KEY=your_real_assembly_ai_key_here
+   ASSEMBLYAI_API_KEY=your_real_assembly_ai_key_here
    ADMIN_PASSWORD=your_strong_password_here
    TRANSCRIPTION_PORT=5123
    TRANSLATION_PORT=5001

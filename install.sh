@@ -31,11 +31,9 @@ else
     echo "[4/4] .env already exists, skipping."
 fi
 
-# 5. Generate password hash if plain-text password exists
-if grep -q "^ADMIN_PASSWORD=" .env 2>/dev/null && ! grep -q "^ADMIN_PASSWORD_HASH=" .env 2>/dev/null; then
-    echo "Generating secure admin password hash..."
-    python3 setup_admin.py
-fi
+# 5. Generate password hash (prompts for password)
+echo "Generating secure admin password hash..."
+python3 setup_admin.py
 
 # 6. Create transcriptions directory
 mkdir -p transcriptions

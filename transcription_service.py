@@ -72,12 +72,13 @@ class TranscriptionService:
         Yields completed transcription text as it becomes available.
         """
         buffer = []
-        chunk_size = audio_streamer.sample_rate  # ~1 second of audio
+        target_samples = audio_streamer.sample_rate  # ~1 second of audio
         while True:
             chunk = audio_streamer.get_audio_chunk()
             if chunk is not None:
                 buffer.append(chunk)
-                if len(buffer) >= chunk_size:
+                total_samples = sum(c.shape[0] for c in buffer)
+                if total_samples >= target_samples:
                     try:
                         combined = np.concatenate(buffer)
                         text = self.transcribe_chunk(combined)

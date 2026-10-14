@@ -214,6 +214,7 @@
 
     <script>
         let currentServiceRunning = false;
+        let savedAudioDevice = null;
 
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
@@ -287,6 +288,11 @@
                         option.text = `${dev.name || dev}${dev.index !== undefined ? ` (Device ${dev.index})` : ''}`;
                         select.appendChild(option);
                     });
+                    if (savedAudioDevice) {
+                        select.value = savedAudioDevice;
+                    } else if (data.devices && data.devices.length > 0) {
+                        select.value = data.devices[0].name || data.devices[0];
+                    }
                     select.disabled = false;
                 })
                 .catch(err => {
@@ -300,14 +306,14 @@
             fetch('/admin/config')
                 .then(r => r.json())
                 .then(data => {
-                    if (data.audio_device) document.getElementById('audioDevice').value = data.audio_device;
+                    savedAudioDevice = data.audio_device || null;
+                    if (savedAudioDevice) document.getElementById('audioDevice').value = savedAudioDevice;
                     if (data.transcription_port) document.getElementById('transcriptionPort').value = data.transcription_port;
                     if (data.translation_port) document.getElementById('translationPort').value = data.translation_port;
                     if (data.bias_words) document.getElementById('biasWords').value = data.bias_words.join(', ');
                     if (data.save_location) document.getElementById('saveLocation').value = data.save_location;
                     if (data.ASSEMBLYAI_API_KEY) document.getElementById('assemblyAiKey').value = data.ASSEMBLYAI_API_KEY;
                     if (data.service_running) updateServiceButtons(true);
-                    document.getElementById('audioDevice').disabled = false;
                 })
                 .catch(err => console.error('Failed to load config:', err));
         }

@@ -2,3 +2,4 @@
 venv/
 transcriptions/
 __pycache__
+app.log

@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class AudioStreamer:
     def __init__(self, device_name=None, sample_rate=16000):
         self.sample_rate = sample_rate
-        self.queue = queue.Queue(maxsize=1000)
+        self.queue = queue.Queue(maxsize=0)
         self.device_index = self._find_device(device_name)
         self.stream = None
         self.is_running = False

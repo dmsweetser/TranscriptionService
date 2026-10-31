@@ -147,6 +147,32 @@ def start_service():
 
         service_running = True
 
+        def _broadcast_transcription(text):
+            """Send transcription text to all connected session queues."""
+            with session_lock:
+                for q in session_queues.values():
+                    try:
+                        q.put_nowait(
+                            {"type": "transcription", "text": text}
+                        )
+                    except Exception:
+                        pass
+
+        def _broadcast_translation(lang, text):
+            """Send translated text for one language to all session queues."""
+            with session_lock:
+                for q in session_queues.values():
+                    try:
+                        q.put_nowait(
+                            {
+                                "type": "translation",
+                                "lang": lang,
+                                "text": text,
+                            }
+                        )
+                    except Exception:
+                        pass
+
         def worker():
             global service_running
             try:
@@ -159,31 +185,18 @@ def start_service():
                     if not service_running:
                         break
                     logger.info("Transcription: %s", text)
-                    # Broadcast transcription to all sessions
-                    with session_lock:
-                        for q in session_queues.values():
-                            try:
-                                q.put_nowait(
-                                    {"type": "transcription", "text": text}
-                                )
-                            except Exception:
-                                pass
 
-                    # Translate and broadcast per-language
+                    # Broadcast transcription immediately (non-blocking)
+                    _broadcast_transcription(text)
+
+                    # Fire off translations in background threads —
+                    # do NOT wait for them; the transcription loop must
+                    # keep flowing to avoid audio buffer buildup.
                     for lang in TRANSLATION_LANGUAGES:
-                        translated = translation_service.translate(text, lang)
-                        with session_lock:
-                            for q in session_queues.values():
-                                try:
-                                    q.put_nowait(
-                                        {
-                                            "type": "translation",
-                                            "lang": lang,
-                                            "text": translated,
-                                        }
-                                    )
-                                except Exception:
-                                    pass
+                        translation_service.translate_async(
+                            text, lang,
+                            lambda t, l=lang: _broadcast_translation(l, t)
+                        )
             except Exception as e:
                 logger.error("Service worker error: %s", e)
             finally:

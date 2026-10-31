@@ -72,9 +72,9 @@ class TranscriptionService:
         Yields completed transcription text as it becomes available.
         """
         buffer = []
-        target_samples = audio_streamer.sample_rate  # ~1 second of audio
+        target_samples = int(audio_streamer.sample_rate * 0.75)  # ~0.75s
         while True:
-            chunk = audio_streamer.get_audio_chunk()
+            chunk = audio_streamer.get_audio_chunk(timeout=0.5)
             if chunk is not None:
                 buffer.append(chunk)
                 total_samples = sum(c.shape[0] for c in buffer)

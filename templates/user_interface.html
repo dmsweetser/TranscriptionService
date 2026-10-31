@@ -7,20 +7,31 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>Live Transcription</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
-            --bg: #0f1117;
-            --surface: #1a1d27;
-            --border: #2a2d3a;
-            --text: #e4e4e7;
-            --text-dim: #a1a1aa;
-            --accent: #6366f1;
-            --accent-glow: rgba(99, 102, 241, 0.15);
-            --green: #22c55e;
-            --red: #ef4444;
+            --bg: #faf9f7;
+            --surface: #ffffff;
+            --border: #e8e6e1;
+            --text: #2c2c2c;
+            --text-dim: #6b6b6b;
+            --text-light: #999999;
+            --accent: #4a6fa5;
+            --accent-light: #e8f0f8;
+            --accent-hover: #3a5a8a;
+            --green: #5a9e6f;
+            --green-light: #e8f5e9;
+            --red: #c0392b;
+            --red-light: #fde8e6;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.1);
             --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --font-display: 'Playfair Display', Georgia, serif;
         }
 
         body {
@@ -30,11 +41,12 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            line-height: 1.6;
         }
 
         /* Header */
         .header {
-            padding: 16px 20px;
+            padding: 24px 32px;
             background: var(--surface);
             border-bottom: 1px solid var(--border);
             display: flex;
@@ -43,52 +55,58 @@
             position: sticky;
             top: 0;
             z-index: 10;
+            box-shadow: var(--shadow-sm);
         }
 
         .header h1 {
-            font-size: 18px;
+            font-family: var(--font-display);
+            font-size: 24px;
             font-weight: 600;
-            letter-spacing: -0.02em;
+            color: var(--text);
+            letter-spacing: -0.01em;
         }
 
         .status {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 13px;
+            gap: 10px;
+            font-size: 14px;
             color: var(--text-dim);
+            font-weight: 500;
         }
 
         .status-dot {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             background: var(--red);
             transition: background 0.3s;
+            box-shadow: 0 0 0 2px var(--red-light);
         }
 
         .status-dot.connected {
             background: var(--green);
-            box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+            box-shadow: 0 0 0 2px var(--green-light);
         }
 
         /* Language tabs */
         .lang-tabs {
             display: flex;
-            gap: 4px;
-            padding: 12px 20px;
+            gap: 8px;
+            padding: 16px 32px;
             background: var(--surface);
             border-bottom: 1px solid var(--border);
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
+            box-shadow: var(--shadow-sm);
         }
 
         .lang-tab {
-            padding: 8px 16px;
-            border: none;
-            background: transparent;
+            padding: 10px 20px;
+            border: 1px solid var(--border);
+            background: var(--surface);
             color: var(--text-dim);
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 500;
             border-radius: 8px;
             cursor: pointer;
@@ -98,69 +116,80 @@
         }
 
         .lang-tab:hover {
-            background: var(--accent-glow);
-            color: var(--text);
+            background: var(--accent-light);
+            color: var(--accent);
+            border-color: var(--accent);
         }
 
         .lang-tab.active {
             background: var(--accent);
             color: white;
+            border-color: var(--accent);
         }
 
         /* Transcription area */
         .transcription-area {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
+            padding: 32px;
             scroll-behavior: smooth;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
         }
 
         .sentence {
-            padding: 10px 14px;
-            margin-bottom: 8px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 10px;
-            font-size: 16px;
-            line-height: 1.6;
-            animation: fadeIn 0.3s ease;
+            border-radius: 12px;
+            font-size: 17px;
+            line-height: 1.7;
+            animation: fadeIn 0.4s ease;
             word-wrap: break-word;
             overflow-wrap: break-word;
+            box-shadow: var(--shadow-sm);
         }
 
         .sentence.translation {
-            border-left: 3px solid var(--accent);
+            border-left: 4px solid var(--accent);
             font-size: 15px;
             color: var(--text-dim);
+            background: var(--accent-light);
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
+            from { opacity: 0; transform: translateY(12px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
         .placeholder {
             text-align: center;
-            color: var(--text-dim);
-            padding: 60px 20px;
-            font-size: 15px;
+            color: var(--text-light);
+            padding: 80px 20px;
+            font-size: 16px;
+            font-style: italic;
         }
 
         /* Footer */
         .footer {
-            padding: 12px 20px;
+            padding: 20px 32px;
             background: var(--surface);
             border-top: 1px solid var(--border);
             text-align: center;
-            font-size: 12px;
-            color: var(--text-dim);
+            font-size: 13px;
+            color: var(--text-light);
         }
 
         /* Responsive */
         @media (max-width: 600px) {
-            .header h1 { font-size: 16px; }
-            .sentence { font-size: 15px; padding: 8px 12px; }
-            .transcription-area { padding: 12px; }
+            .header { padding: 16px 20px; }
+            .header h1 { font-size: 20px; }
+            .lang-tabs { padding: 12px 20px; }
+            .sentence { font-size: 16px; padding: 14px 16px; }
+            .transcription-area { padding: 20px; }
+            .footer { padding: 16px 20px; }
         }
     </style>
 </head>

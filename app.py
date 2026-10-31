@@ -270,8 +270,8 @@ def persist_config(config):
                     k, v = line.split("=", 1)
                     existing[k.strip()] = v.strip()
 
-    # Values to persist
-    env_vars = {
+    # Keys that the config form explicitly manages
+    managed_keys = {
         "ASSEMBLYAI_API_KEY": config.get("ASSEMBLYAI_API_KEY", ""),
         "DEFAULT_AUDIO_DEVICE": config.get("audio_device", "Default Audio Device"),
         "TRANSCRIPTION_PORT": str(config.get("transcription_port", 5123)),
@@ -283,17 +283,24 @@ def persist_config(config):
     }
     # Preserve password hash / secret key if not being changed
     if config.get("admin_password_hash"):
-        env_vars["ADMIN_PASSWORD_HASH"] = config["admin_password_hash"]
+        managed_keys["ADMIN_PASSWORD_HASH"] = config["admin_password_hash"]
     elif "ADMIN_PASSWORD_HASH" in existing:
-        env_vars["ADMIN_PASSWORD_HASH"] = existing["ADMIN_PASSWORD_HASH"]
+        managed_keys["ADMIN_PASSWORD_HASH"] = existing["ADMIN_PASSWORD_HASH"]
 
     if config.get("secret_key"):
-        env_vars["SECRET_KEY"] = config["secret_key"]
+        managed_keys["SECRET_KEY"] = config["secret_key"]
     elif "SECRET_KEY" in existing:
-        env_vars["SECRET_KEY"] = existing["SECRET_KEY"]
+        managed_keys["SECRET_KEY"] = existing["SECRET_KEY"]
+
+    # Preserve ALL other existing keys (ALLOWED_ORIGINS, GUNICORN_WORKERS, etc.)
+    # so saving config never wipes them out
+    preserve_keys = {"ADMIN_PASSWORD_HASH", "SECRET_KEY"}
+    for k, v in existing.items():
+        if k not in managed_keys and k not in preserve_keys:
+            managed_keys[k] = v
 
     with open(env_path, "w") as f:
-        for key, value in env_vars.items():
+        for key, value in managed_keys.items():
             f.write(f"{key}={value}\n")
 
     # Reload into os.environ

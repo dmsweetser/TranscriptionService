@@ -5,139 +5,222 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>Admin Panel — TranscriptionService</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
-            --bg: #0f1117;
-            --surface: #1a1d27;
-            --border: #2a2d3a;
-            --text: #e4e4e7;
-            --text-dim: #a1a1aa;
-            --accent: #6366f1;
-            --accent-glow: rgba(99, 102, 241, 0.15);
-            --green: #22c55e;
-            --red: #ef4444;
-            --yellow: #eab308;
+            --bg: #faf9f7;
+            --surface: #ffffff;
+            --border: #e8e6e1;
+            --text: #2c2c2c;
+            --text-dim: #6b6b6b;
+            --text-light: #999999;
+            --accent: #4a6fa5;
+            --accent-light: #e8f0f8;
+            --accent-hover: #3a5a8a;
+            --green: #5a9e6f;
+            --green-light: #e8f5e9;
+            --red: #c0392b;
+            --red-light: #fde8e6;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.1);
             --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --font-display: 'Playfair Display', Georgia, serif;
         }
         body {
             font-family: var(--font);
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
+            line-height: 1.6;
         }
         .header {
-            padding: 16px 24px;
+            padding: 24px 32px;
             background: var(--surface);
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
             justify-content: space-between;
+            box-shadow: var(--shadow-sm);
         }
-        .header h1 { font-size: 18px; font-weight: 600; }
+        .header h1 {
+            font-family: var(--font-display);
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text);
+        }
         .btn {
-            padding: 8px 16px;
+            padding: 10px 20px;
             border: 1px solid var(--border);
             border-radius: 8px;
             background: var(--surface);
             color: var(--text);
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
             font-family: var(--font);
         }
-        .btn:hover:not(:disabled) { background: var(--accent-glow); border-color: var(--accent); }
-        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        .btn-primary { background: var(--accent); border-color: var(--accent); color: white; }
-        .btn-primary:hover:not(:disabled) { opacity: 0.9; }
-        .btn-success { background: var(--green); border-color: var(--green); color: white; }
-        .btn-danger { background: var(--red); border-color: var(--red); color: white; }
-        .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+        .btn:hover:not(:disabled) {
+            background: var(--accent-light);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+        }
+        .btn-success {
+            background: var(--green);
+            border-color: var(--green);
+            color: white;
+        }
+        .btn-success:hover:not(:disabled) {
+            background: #4a8e5f;
+            border-color: #4a8e5f;
+        }
+        .btn-danger {
+            background: var(--red);
+            border-color: var(--red);
+            color: white;
+        }
+        .btn-danger:hover:not(:disabled) {
+            background: #a83225;
+            border-color: #a83225;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 32px;
+        }
         .card {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-sm);
         }
         .card h2 {
-            font-size: 15px;
+            font-family: var(--font-display);
+            font-size: 20px;
             font-weight: 600;
-            margin-bottom: 16px;
-            color: var(--text-dim);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            margin-bottom: 20px;
+            color: var(--text);
+            letter-spacing: -0.01em;
         }
-        .form-group { margin-bottom: 16px; }
+        .form-group { margin-bottom: 20px; }
         .form-group label {
             display: block;
-            font-size: 13px;
+            font-size: 14px;
+            font-weight: 500;
             color: var(--text-dim);
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
         .form-group input,
         .form-group select,
         .form-group textarea {
             width: 100%;
-            padding: 10px 12px;
+            padding: 12px 16px;
             background: var(--bg);
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 10px;
             color: var(--text);
-            font-size: 14px;
+            font-size: 15px;
             font-family: var(--font);
+            transition: all 0.2s;
         }
         .form-group input:focus,
         .form-group select:focus,
         .form-group textarea:focus {
             outline: none;
             border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-light);
         }
-        .form-group textarea { min-height: 60px; resize: vertical; }
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
         .status-badge {
             display: inline-block;
-            padding: 4px 10px;
+            padding: 6px 14px;
             border-radius: 20px;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 600;
         }
-        .status-running { background: rgba(34, 197, 94, 0.15); color: var(--green); }
-        .status-stopped { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+        .status-running {
+            background: var(--green-light);
+            color: var(--green);
+        }
+        .status-stopped {
+            background: var(--red-light);
+            color: var(--red);
+        }
         .toast {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 12px 20px;
-            border-radius: 8px;
+            top: 24px;
+            right: 24px;
+            padding: 14px 24px;
+            border-radius: 12px;
             font-size: 14px;
+            font-weight: 500;
             z-index: 1000;
             animation: slideIn 0.3s ease;
+            box-shadow: var(--shadow-lg);
         }
-        .toast.success { background: var(--green); color: white; }
-        .toast.error { background: var(--red); color: white; }
+        .toast.success {
+            background: var(--green);
+            color: white;
+        }
+        .toast.error {
+            background: var(--red);
+            color: white;
+        }
         @keyframes slideIn {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
         .connections-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
         }
         .connection-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 12px;
+            padding: 16px;
             background: var(--bg);
-            border-radius: 8px;
+            border-radius: 12px;
             border: 1px solid var(--border);
         }
-        .connection-item span:first-child { font-size: 14px; }
+        .connection-item span:first-child {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .service-control-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
         @media (max-width: 600px) {
-            .container { padding: 16px; }
-            .card { padding: 16px; }
+            .container { padding: 20px; }
+            .card { padding: 20px; }
+            .header { padding: 16px 20px; }
+            .header h1 { font-size: 20px; }
         }
     </style>
 </head>
@@ -151,9 +234,9 @@
         <!-- Service Control -->
         <div class="card">
             <h2>Service Control</h2>
-            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                <button class="btn btn-success" id="startBtn" onclick="controlService('start')">▶ Start Service</button>
-                <button class="btn btn-danger" id="stopBtn" onclick="controlService('stop')" disabled>■ Stop Service</button>
+            <div class="service-control-row">
+                <button class="btn btn-success" id="startBtn" onclick="controlService('start')">Start Service</button>
+                <button class="btn btn-danger" id="stopBtn" onclick="controlService('stop')" disabled>Stop Service</button>
                 <span id="serviceStatus" class="status-badge status-stopped">Stopped</span>
             </div>
         </div>

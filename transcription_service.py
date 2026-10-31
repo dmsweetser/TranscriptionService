@@ -44,7 +44,7 @@ class TranscriptionService:
 
     def transcribe_chunk(self, audio_data):
         """Transcribe a single numpy audio chunk. Returns a string."""
-        if not self.api_key:
+        if not self.transcriber:
             return self._mock_transcription()
 
         try:

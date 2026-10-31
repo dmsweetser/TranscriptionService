@@ -16,8 +16,9 @@ from audio_streamer import AudioStreamer
 from transcription_service import TranscriptionService
 from translation_service import TranslationService
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from the app's directory (not CWD)
+_app_dir = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(_app_dir, ".env"))
 
 # Configure logging for production
 from logging.handlers import RotatingFileHandler
@@ -101,8 +102,7 @@ session_lock = threading.Lock()
 service_lock = threading.Lock()  # protects start/stop transitions
 
 TRANSLATION_LANGUAGES = [
-    "English", "French", "Spanish", "Arabic",
-    "German", "Italian", "Japanese", "Korean",
+    "English", "French", "Spanish", "German",
 ]
 
 

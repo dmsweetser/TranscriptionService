@@ -3,15 +3,19 @@ import logging
 import time
 import threading
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("app.translation")
 
 # Per-language rate limiting: skip translation if within this many seconds
-# of the last translation for that language.
-_LANG_RATE_LIMIT = 3.0  # seconds
+# of the last translation for that language. Set to 5.0s to stay under
+# Google's 5 req/s global limit.
+_LANG_RATE_LIMIT = 8.0  # seconds per language
 
 _LANG_LOCK = threading.Lock()
 # {lang_name: last_translation_timestamp}
 _lang_last_time = {}
+
+# Global semaphore to serialize translation requests and avoid Google API rate limit
+_translation_semaphore = threading.Semaphore(1)
 
 LANG_CODE_MAP = {
     "English": "en",
@@ -30,15 +34,19 @@ class TranslationService:
         self._global_lock = threading.Lock()
 
     def translate(self, text, target_lang="en"):
-        """Translate text. Returns the original text if translation fails or is rate-limited."""
+        """Translate text synchronously. Returns the translated text
+        or the original text if translation fails. Rate-limited per language."""
         if not text or not text.strip():
             return ""
 
-        # Per-language rate limiting (non-blocking — just skip)
+        # Per-language rate limiting — atomically check and update under lock
         with _LANG_LOCK:
             last = _lang_last_time.get(target_lang, 0.0)
             if time.time() - last < _LANG_RATE_LIMIT:
-                return ""  # skip — will be picked up next cycle
+                return None  # rate-limited
+
+            # Mark as translating (prevents concurrent duplicates)
+            _lang_last_time[target_lang] = time.time()
 
         try:
             lang_code = LANG_CODE_MAP.get(target_lang, target_lang)
@@ -54,24 +62,37 @@ class TranslationService:
 
     def translate_async(self, text, target_lang, callback):
         """Non-blocking translation: runs in a background thread and calls
-        callback(translated_text) when done. Skips if rate-limited."""
+        callback(translated_text) when done. Skips if rate-limited.
+        
+        NOTE: Does NOT call self.translate() to avoid double rate-limit check.
+        Instead, it does the translation directly since the rate limit slot
+        is already reserved by this method.
+        """
         if not text or not text.strip():
             return
 
-        # Quick rate-limit check (may still race, but that's fine —
-        # the worker loop will just send the same text again next cycle)
+        # Check per-language rate limit and reserve the slot.
         with _LANG_LOCK:
             last = _lang_last_time.get(target_lang, 0.0)
             if time.time() - last < _LANG_RATE_LIMIT:
-                return
+                return  # language rate-limited, skip
+            _lang_last_time[target_lang] = time.time()
 
         def _do_translate():
+            # Serialize translation requests to avoid Google API rate limit
+            _translation_semaphore.acquire()
             try:
-                result = self.translate(text, target_lang)
-                if result:  # non-empty means it wasn't rate-limited
-                    callback(result)
+                lang_code = LANG_CODE_MAP.get(target_lang, target_lang)
+                translator = GoogleTranslator(source="auto", target=lang_code)
+                translated = translator.translate(text)
+                with _LANG_LOCK:
+                    _lang_last_time[target_lang] = time.time()
+                result = translated if translated else text
+                callback(result)
             except Exception as e:
                 logger.error("Async translation error (%s): %s", target_lang, e)
+            finally:
+                _translation_semaphore.release()
 
         t = threading.Thread(target=_do_translate, daemon=True)
         t.start()

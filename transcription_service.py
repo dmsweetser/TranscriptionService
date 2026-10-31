@@ -6,8 +6,7 @@ import time
 import wave
 import tempfile
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("app.transcription")
 
 
 class TranscriptionService:
@@ -18,6 +17,8 @@ class TranscriptionService:
             for w in os.getenv("BIAS_WORDS", "").split(",")
             if w.strip()
         ]
+        logger.info("TranscriptionService init: api_key set=%s, key_len=%s",
+                     bool(self.api_key), len(self.api_key) if self.api_key else 0)
         if not self.api_key or self.api_key == "***":
             logger.warning(
                 "Assembly AI API key not set. Transcription will be mocked."
@@ -25,7 +26,10 @@ class TranscriptionService:
             self.transcriber = None
         else:
             try:
+                import assemblyai as aai
+                aai.settings.api_key = self.api_key
                 self.transcriber = aai.Transcriber()
+                logger.info("AssemblyAI transcriber created successfully")
             except Exception as e:
                 logger.warning(
                     "Failed to create AssemblyAI transcriber (%s). "
@@ -79,9 +83,12 @@ class TranscriptionService:
         """Continuously collect audio chunks and transcribe them.
 
         Yields completed transcription text as it becomes available.
+        Deduplicates: only yields text when it actually changes from the
+        previous result, preventing redundant translation calls.
         """
         buffer = []
-        target_samples = int(audio_streamer.sample_rate * 0.75)  # ~0.75s
+        target_samples = int(audio_streamer.sample_rate * 0.5)  # ~0.5s buffer
+        last_text = ""
         while True:
             chunk = audio_streamer.get_audio_chunk(timeout=0.5)
             if chunk is not None:
@@ -92,7 +99,9 @@ class TranscriptionService:
                         combined = np.concatenate(buffer)
                         text = self.transcribe_chunk(combined)
                         buffer = []
-                        if text:
+                        # Deduplicate: only yield if text actually changed
+                        if text and text != last_text:
+                            last_text = text
                             yield text
                     except Exception as e:
                         logger.error("Buffer processing error: %s", e)

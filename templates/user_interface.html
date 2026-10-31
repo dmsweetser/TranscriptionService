@@ -230,10 +230,12 @@
 
         let currentLang = 'English';
         let transcriptionSource = null;
-        let translationSource = null;
+        let reconnectTimer = null;
         let atBottom = true;
         let hasContent = false;
-        let reconnectTimer = null;
+
+        // Track translations we've already displayed to avoid duplicates
+        let displayedTranslations = new Set();
 
         // Detect if user is at bottom
         function checkBottom() {
@@ -275,7 +277,8 @@
             e.target.classList.add('active');
             currentLang = e.target.dataset.lang;
             pageTitle.textContent = `Live ${currentLang} Transcription`;
-            restartTranslationStream();
+            // Clear displayed translations for the new language
+            displayedTranslations.clear();
         });
 
         // Scroll handling
@@ -307,6 +310,21 @@
                         statusDot.classList.add('connected');
                         statusText.textContent = 'Connected';
                         appendSentence(escapeHtml(data.text));
+                    } else if (data.type === 'translation') {
+                        // Only show translations for the currently selected language
+                        if (data.lang === currentLang) {
+                            // Deduplicate: skip if we've already shown this exact translation
+                            const key = `${data.lang}:${data.text}`;
+                            if (displayedTranslations.has(key)) return;
+                            displayedTranslations.add(key);
+                            // Cap the set to prevent memory issues
+                            if (displayedTranslations.size > 100) {
+                                const arr = [...displayedTranslations];
+                                displayedTranslations = new Set(arr.slice(-50));
+                            }
+                            statusText.textContent = `Connected — ${currentLang}`;
+                            appendSentence(escapeHtml(data.text), true);
+                        }
                     }
                 } catch (e) {
                     // ignore parse errors (keepalive etc)
@@ -320,42 +338,8 @@
             };
         }
 
-        function startTranslationStream() {
-            if (translationSource) {
-                translationSource.close();
-            }
-            translationSource = new EventSource(`/api/translation/stream/${currentLang}`);
-
-            translationSource.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    if (data.type === 'translation') {
-                        statusDot.classList.add('connected');
-                        statusText.textContent = `Connected — ${currentLang}`;
-                        appendSentence(escapeHtml(data.text), true);
-                    }
-                } catch (e) {
-                    // ignore
-                }
-            };
-
-            translationSource.onerror = () => {
-                statusDot.classList.remove('connected');
-                statusText.textContent = 'Reconnecting...';
-                scheduleReconnect();
-            };
-        }
-
-        function restartTranslationStream() {
-            if (translationSource) {
-                translationSource.close();
-            }
-            startTranslationStream();
-        }
-
         function startStreams() {
             startTranscriptionStream();
-            startTranslationStream();
         }
 
         function escapeHtml(text) {

@@ -18,11 +18,20 @@ class TranscriptionService:
             for w in os.getenv("BIAS_WORDS", "").split(",")
             if w.strip()
         ]
-        if not self.api_key:
+        if not self.api_key or self.api_key == "***":
             logger.warning(
-                "Assembly AI API key not found. Transcription will be mocked."
+                "Assembly AI API key not set. Transcription will be mocked."
             )
-        self.transcriber = aai.Transcriber() if self.api_key else None
+            self.transcriber = None
+        else:
+            try:
+                self.transcriber = aai.Transcriber()
+            except Exception as e:
+                logger.warning(
+                    "Failed to create AssemblyAI transcriber (%s). "
+                    "Transcription will be mocked.", e
+                )
+                self.transcriber = None
 
     def _mock_transcription(self):
         phrases = [

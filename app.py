@@ -102,7 +102,8 @@ session_lock = threading.Lock()
 service_lock = threading.Lock()  # protects start/stop transitions
 
 TRANSLATION_LANGUAGES = [
-    "English", "French", "Spanish", "German",
+    "English", "French", "Spanish", "Arabic", "German",
+    "Italian", "Japanese", "Korean",
 ]
 
 

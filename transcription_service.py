@@ -29,6 +29,8 @@ class TranscriptionService:
                 import assemblyai as aai
                 aai.settings.api_key = self.api_key
                 self.transcriber = aai.Transcriber()
+                if self.transcriber is None:
+                    raise ValueError("Transcriber returned None")
                 logger.info("AssemblyAI transcriber created successfully")
             except Exception as e:
                 logger.warning(
